@@ -27,11 +27,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 import multiprocessing as mp
+import os
 
 strategies = ['good', 'bad', 'random', 'ignore0_0.9', 'ignore0_0.6', 'ignore0_0.3']
 
 config['total_steps'] = 3000
-cycle_num = 50
+cycle_num = 20
 
 def run_simulation(strategy):
     print(f'Testing strategy {strategy}')
@@ -54,7 +55,7 @@ def run_simulation(strategy):
         print('average reward for a single anomaly detection cycle:', sum(no_zero_rewards) / len(no_zero_rewards))
 
     # plot part
-    pic_name = f"strategy_{strategy}_hist_dist_chart"
+    pic_name = f"strategy_{strategy}_hist_dist_chart_{cycle_num}"
     fig, ax1 = plt.subplots(figsize=(10, 6))
     n, bins, patches = ax1.hist(data, bins=10, edgecolor='black', alpha=0.7)
     ax1.set_ylabel('Frequency')
@@ -66,12 +67,17 @@ def run_simulation(strategy):
     ax2.set_ylabel('Density')
     plt.title(f'Histogram and Distribution Curve (Strategy {strategy})')
     ax1.set_xlabel('Value')
-    plt.savefig(f"./tmp_results/naive_reward_test/50/{pic_name}.png", dpi=300)
+    plt.savefig(f"./tmp_results/naive_reward_test/{cycle_num}/{pic_name}.png", dpi=300)
     plt.show()
+    data_np = np.array(data)
+    np.save(f"./tmp_results/naive_reward_test/{cycle_num}/{pic_name}.npy", data_np)
     return strategy, data
 
 
 if __name__ == '__main__':
+    result_dir = f"./tmp_results/naive_reward_test/{cycle_num}"
+    os.makedirs(result_dir, exist_ok=True)
+
     with mp.Pool(processes=mp.cpu_count()) as pool:
         results = pool.map(run_simulation, strategies)
 

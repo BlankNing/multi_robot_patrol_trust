@@ -1,4 +1,4 @@
-from algo.PartitionAlgo import PartitionAlgo
+from patrol_algo.PartitionAlgo import PartitionAlgo
 
 class AlgoFactory():
     @staticmethod
