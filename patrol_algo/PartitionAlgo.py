@@ -1,5 +1,5 @@
 from .AbstractAlgo import Algo
-from .astar_shortest_path import calculate_shortest_path
+from utils.astar_shortest_path import calculate_shortest_path
 
 class PartitionAlgo(Algo):
     def __init__(self, algo_config):

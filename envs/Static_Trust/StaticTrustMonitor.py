@@ -1,4 +1,4 @@
-from patrol_class.Monitor import Monitor
+from basic_patrol_class.Monitor import Monitor
 
 class StaticMonitor(Monitor):
     def __init__(self):

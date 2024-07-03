@@ -1,4 +1,4 @@
-from patrol_class.Robot import Robot
+from basic_patrol_class.Robot import Robot
 
 import random
 

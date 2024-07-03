@@ -12,7 +12,7 @@ choose to cooperate with probability 0.7 todo
 '''
 
 # from Envs.Trust_Idleness.TrustEnv import TrustEnv as Env
-from Envs.Static_Trust.StaticEnv import StaticEnv as Env
+from envs.Static_Trust.StaticEnv import StaticEnv as Env
 from configs.static_trust_patrol_config import static_trust_patrol_config as config
 import logging
 from datetime import datetime

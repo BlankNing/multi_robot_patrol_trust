@@ -1,4 +1,4 @@
-from patrol_class.Env import BasicEnv
+from basic_patrol_class.Env import BasicEnv
 
 from .TrustMonitor import TrustMonitor
 from trust_algo.TrustFactory import TrustFactory
