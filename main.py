@@ -37,7 +37,7 @@ for t in range(config['total_steps']):
     env.step(verbose=False)
 
 # plot idleness, confusion matrix, reward
-env.monitor.plot_idleness(0)
+# env.monitor.plot_idleness(0)
 # env.monitor.plot_trust_value(0)
 # env.monitor.create_patrol_screenshot(config, 200)
-env.monitor.create_patrol_gif(config)
+# env.monitor.create_patrol_gif(config)
