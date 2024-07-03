@@ -1,8 +1,5 @@
+from basic_patrol_class.Robot import Robot
 import logging
-
-from patrol_class.Robot import Robot
-import logging
-from algo.astar_shortest_path import calculate_shortest_path
 import numpy as np
 import random
 

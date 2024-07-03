@@ -21,7 +21,7 @@ The rewards should make up for the distance penalty, but shoud not be too large 
 still receive good reward.
 '''
 
-from Envs.Static_Trust.StaticEnv import StaticEnv as Env
+from envs.Static_Trust.StaticEnv import StaticEnv as Env
 from configs.static_trust_patrol_config import static_trust_patrol_config as config
 import matplotlib.pyplot as plt
 import numpy as np

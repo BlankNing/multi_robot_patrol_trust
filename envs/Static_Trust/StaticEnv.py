@@ -1,6 +1,6 @@
 import logging
 
-from patrol_class.Env import BasicEnv
+from basic_patrol_class.Env import BasicEnv
 from .StaticTrustRobot import StaticRobot
 from .StaticTrustMonitor import StaticMonitor
 from trust_algo.trust_config_dispatch import get_trust_algo_config

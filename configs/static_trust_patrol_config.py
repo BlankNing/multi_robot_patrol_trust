@@ -1,4 +1,4 @@
-from load_map import *
+from utils.load_map import *
 
 map_name = 'museum'
 patrol_algo = 'partition'
