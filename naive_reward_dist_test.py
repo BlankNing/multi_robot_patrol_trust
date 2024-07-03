@@ -28,25 +28,28 @@ import numpy as np
 from scipy import stats
 import multiprocessing as mp
 import os
+import copy
 
-strategies = ['good', 'bad', 'random', 'ignore0_0.9', 'ignore0_0.6', 'ignore0_0.3']
+strategies = ['good', 'bad', 'random', 'ignore0_1.0', 'ignore0_0.9', 'ignore0_0.6', 'ignore0_0.3']
 
 config['total_steps'] = 3000
-cycle_num = 23
+cycle_num = 50
 
 def run_simulation(strategy):
     print(f'Testing strategy {strategy}')
-    config['robot_config']['select_strategy'] = strategy
-    env = Env(config)
+    # side effect will happen without this copy in multi-processing
+    local_config = copy.deepcopy(config)
+    local_config['robot_config']['select_strategy'] = strategy
+    env = Env(local_config)
     raw_data = []
     data = []
     anomaly_cycle_last_time = 0
 
     for index in range(cycle_num):
         print(f'Test Cycle: {index + 1}/{cycle_num} for strategy {strategy}')
-        for t in range(config['total_steps']):
+        for t in range(local_config['total_steps']):
             if t % 1000 == 0:
-                print(f"{t}/{config['total_steps']} for strategy {strategy}")
+                print(f"{t}/{local_config['total_steps']} for strategy {strategy}")
             env.step(verbose=False)
 
         no_zero_rewards = [i for i in env.monitor.rewards if i != 0]
