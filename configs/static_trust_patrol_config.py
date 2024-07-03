@@ -23,6 +23,7 @@ static_trust_patrol_config = {
         'robots_capable_tasks':{i : [i % 4] for i in range(8)},
         'extra_reward': 5000,
         'env_penalty': -5000,
+        'select_strategy': 'trust',
     },
     'algo_config':{
         'patrol_algo_name':patrol_algo,

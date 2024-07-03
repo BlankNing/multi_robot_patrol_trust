@@ -67,13 +67,13 @@ class BasicEnv:
         self.nodes_num = len(self.map_adj_matrix[0])
 
         self.nodes = [Node(i, self.node_pos_matrix[i]) for i in range(self.nodes_num)]
-        print("Basic Nodes have been set up")
+        # print("Basic Nodes have been set up")
         self.algo_engine = AlgoFactory().create_algo(self.patrol_algo, self.patrol_algo_config)
-        print("Patrol Algorithms have been set up")
+        # print("Patrol Algorithms have been set up")
         self.robots = [Robot(i, self.algo_engine, self.node_pos_matrix, self.init_pos[i]) for i in range(self.robots_num)]
-        print("Basic Robots have been set up")
+        # print("Basic Robots have been set up")
         self.monitor = Monitor()
-        print("Basic Monitor is ready")
+        # print("Basic Monitor is ready")
 
         # logging
         self.logger = logging.getLogger(__name__)

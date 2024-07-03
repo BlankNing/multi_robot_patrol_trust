@@ -29,6 +29,8 @@ class StaticEnv(BasicEnv):
         self.robot_config = config_file['robot_config']
         # only 1 robot report anomaly at one time
         self.has_anomaly = False
+        # init anomaly
+        self.anomaly = -1
         # Init trust_engine
         self.trust_engine = TrustFactory().create_algo(self.trust_algo, self.trust_algo_config)
         # Static Env Monitor
@@ -42,12 +44,15 @@ class StaticEnv(BasicEnv):
         # load log system
         self.logger = logging.getLogger(__name__)
 
+
     def update_anomaly_random_report(self):
         '''
         update a new anomaly in the environment
         :return: None
         '''
+        self.logger.info(f"Last Anomaly: {self.anomaly}")
         self.anomaly = random.randint(0, self.nodes_num)
+        self.logger.info(f"New Anomaly: {self.anomaly}")
         self.monitor.update_anomaly_pos(self.anomaly)
 
     def step(self, verbose=False):

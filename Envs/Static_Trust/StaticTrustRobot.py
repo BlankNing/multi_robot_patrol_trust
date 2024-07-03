@@ -16,6 +16,7 @@ class StaticRobot(Robot):
         self.required_tasks_list = config_file['required_tasks_list']
         self.env_penalty = config_file['env_penalty']
         self.extra_reward = config_file['extra_reward']
+        self.select_strategy = config_file['select_strategy']
         self.monitor = monitor
         self.trust_engine = trust_engine
         self.service_time = 0
@@ -34,13 +35,11 @@ class StaticRobot(Robot):
 
     # todo: choose_service_provider based on trust engine
     def choose_service_provider_determined(self, required_tasks):
-
         # {task:robot_id}
         return {1: 1, 2: 2, 3: 3, 0: 4}
 
     def choose_service_provider_random(self, required_tasks):
         '''
-
         :param required_tasks: list eg: [0,2,3]
         :return:
         '''
@@ -58,13 +57,11 @@ class StaticRobot(Robot):
 
     def choose_service_provider_trust(self, required_tasks):
         '''
-
         :param required_tasks: list eg: [0,2,3]
         :return:
         '''
         # task_to_robots eg: {1:[1,5],2:[2,6]}
         task_to_robots = {task: [] for task in required_tasks}
-
         for robot, tasks in self.robots_capable_tasks.items():
             for task in tasks:
                 if task in required_tasks:
@@ -75,21 +72,21 @@ class StaticRobot(Robot):
         # return task_to_robot_assignment
 
     # todo: choose_service_quality based on trust engine/random/determined
-    def choose_service_quality_ignore_0(self, request_robot_id, probability):
-        if request_robot_id == 0 and random.random() < probability:
-            return 0
-        else:
+    def choose_service_quality(self, request_robot_id):
+        if self.select_strategy == 'trust':
+            pass
+        elif self.select_strategy =='good':
             return 1
-
-    def choose_service_quality_determine(self, request_robot_id):
-        return 1
-
-    def choose_service_quality_trust(self, request_robot_id):
-        '0:bad, 1 good'
-        return 0
-
-    def choose_service_quality_random(self, request_robot_id):
-        return random.randint(0, 1)
+        elif self.select_strategy == 'bad':
+            return 0
+        elif self.select_strategy == 'random':
+            return random.randint(0, 1)
+        elif 'ignore0' in self.select_strategy:
+            probability = float(self.select_strategy.split('_')[1]) # probability that other robot will ignore Robot 0
+            if request_robot_id == 0 and random.random() < probability:
+                return 0
+            else:
+                return 1
 
     def check_node(self):
         return np.where((self.node_pos_matrix == self.current_pos).all(axis=1))[0]
@@ -159,7 +156,7 @@ class StaticRobot(Robot):
             impression = current_request
             request_robot_id = current_request['request_robot']
             # todo: choose_service_quality based on trust
-            service_quality = self.choose_service_quality_random(request_robot_id)
+            service_quality = self.choose_service_quality(request_robot_id)
             impression['service_quality'] = service_quality
 
             is_true_anomaly = impression['is_true_anomaly']
