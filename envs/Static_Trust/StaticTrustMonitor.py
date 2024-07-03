@@ -49,7 +49,7 @@ class StaticMonitor(Monitor):
     def set_in_cycle_flag(self):
         self.in_cycle_flag = 1
 
-    def cancle_in_cycle_flag(self):
+    def cancel_in_cycle_flag(self):
         self.in_cycle_flag = 0
 
     def get_in_cycle_flag(self):

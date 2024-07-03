@@ -32,12 +32,13 @@ import os
 strategies = ['good', 'bad', 'random', 'ignore0_0.9', 'ignore0_0.6', 'ignore0_0.3']
 
 config['total_steps'] = 3000
-cycle_num = 20
+cycle_num = 23
 
 def run_simulation(strategy):
     print(f'Testing strategy {strategy}')
     config['robot_config']['select_strategy'] = strategy
     env = Env(config)
+    raw_data = []
     data = []
     anomaly_cycle_last_time = 0
 
@@ -50,10 +51,13 @@ def run_simulation(strategy):
 
         no_zero_rewards = [i for i in env.monitor.rewards if i != 0]
         data.append(sum(no_zero_rewards) / len(no_zero_rewards))
+        raw_data.extend(no_zero_rewards)
         print('anomaly detection cycle number: {}'.format(len(no_zero_rewards) - anomaly_cycle_last_time))
         anomaly_cycle_last_time = len(no_zero_rewards)
         print('average reward for a single anomaly detection cycle:', sum(no_zero_rewards) / len(no_zero_rewards))
 
+    # No differences between using raw_data or data
+    data = raw_data
     # plot part
     pic_name = f"strategy_{strategy}_hist_dist_chart_{cycle_num}"
     fig, ax1 = plt.subplots(figsize=(10, 6))
@@ -69,8 +73,8 @@ def run_simulation(strategy):
     ax1.set_xlabel('Value')
     plt.savefig(f"./tmp_results/naive_reward_test/{cycle_num}/{pic_name}.png", dpi=300)
     plt.show()
-    data_np = np.array(data)
-    np.save(f"./tmp_results/naive_reward_test/{cycle_num}/{pic_name}.npy", data_np)
+    raw_data_np = np.array(raw_data)
+    np.save(f"./tmp_results/naive_reward_test/{cycle_num}/{pic_name}.npy", raw_data_np)
     return strategy, data
 
 

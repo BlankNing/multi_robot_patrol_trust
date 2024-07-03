@@ -8,15 +8,18 @@ class StaticRobot(Robot):
     def __init__(self, id, algo_engine, node_pos_matrix, init_pos, untrust_list, monitor, trust_engine, config_file):
         super().__init__(id, algo_engine, node_pos_matrix, init_pos)
 
+        # {robot id: [capable task list]}
         self.robots_capable_tasks = config_file['robots_capable_tasks']
         self.robot_capable_task = config_file['robots_capable_tasks'][self.id]
         self.required_tasks_list = config_file['required_tasks_list']
         self.env_penalty = config_file['env_penalty']
         self.extra_reward = config_file['extra_reward']
-        self.select_strategy = config_file['select_strategy']
+        self.service_select_strategy = config_file['service_select_strategy']
+        self.provider_select_strategy = config_file['provider_select_strategy']
         self.monitor = monitor
         self.trust_engine = trust_engine
         self.service_time = 0
+        self.task_to_robot = self.generate_task_to_robot()
         # load logging system
         self.logger = logging.getLogger(__name__)
 
@@ -30,56 +33,43 @@ class StaticRobot(Robot):
         self.true_anomaly_pos = self.monitor.get_anomaly_pos()
         self.pgm_map_matrix = config_file['pgm_map_matrix']
 
+
     # todo: choose_service_provider based on trust engine
-    def choose_service_provider_determined(self, required_tasks):
-        # {task:robot_id}
-        return {1: 1, 2: 2, 3: 3, 0: 4}
-
-    def choose_service_provider_random(self, required_tasks):
+    def choose_service_provider(self, required_tasks):
         '''
-        :param required_tasks: list eg: [0,2,3]
-        :return:
+        :param required_tasks: list eg: [0,2,3]; task_to_robot {task:[all robots that are capable of this task]}
+        robot capable task: {robot id: [capable task list]}
+        task_to_robots eg: {1:[1,5],2:[2,6]}
+        Can get {1:[1,5],2:[2,6], 3:[3,7],4:[4,0]} initially
+        now we received a required_tasks list [1,2]
+        need to return {1:[1,5],2:[2,6]} -> {1:1,2:2}
+        :return: task_ro_robot_assignment {task: robot_id}
         '''
-        # task_to_robots eg: {1:[1,5],2:[2,6]}
-        task_to_robots = {task: [] for task in required_tasks}
-
-        for robot, tasks in self.robots_capable_tasks.items():
-            for task in tasks:
-                if task in required_tasks and robot != self.id:
-                    task_to_robots[task].append(robot)
-
-        # random strategy sample one robot to assign the mission
-        task_to_robot_assignment = {task: random.choice(task_to_robots[task]) for task in required_tasks}
-        return task_to_robot_assignment
-
-    def choose_service_provider_trust(self, required_tasks):
-        '''
-        :param required_tasks: list eg: [0,2,3]
-        :return:
-        '''
-        # task_to_robots eg: {1:[1,5],2:[2,6]}
-        task_to_robots = {task: [] for task in required_tasks}
-        for robot, tasks in self.robots_capable_tasks.items():
-            for task in tasks:
-                if task in required_tasks:
-                    task_to_robots[task].append(robot)
-
-        # todo: assign task to the most trustworthy robot
-
-        # return task_to_robot_assignment
+        # 1. delete the other unrequired task
+        task_to_robots = {key: self.task_to_robot[key] for key in required_tasks if key in self.task_to_robot}
+        # 2. delete request robot id from the robot list
+        for task, robots in task_to_robots.items():
+            if self.id in robots:
+                robots.remove(self.id) # A robot cannot call it self to help
+        if self.provider_select_strategy == 'trust':
+            pass
+        elif self.provider_select_strategy == 'random':
+            return {task: random.choice(task_to_robots[task]) for task in required_tasks}
+        elif self.provider_select_strategy == 'determined':
+            return {1: 1, 2: 2, 3: 3, 0: 4}
 
     # todo: choose_service_quality based on trust engine/random/determined
     def choose_service_quality(self, request_robot_id):
-        if self.select_strategy == 'trust':
+        if self.service_select_strategy == 'trust':
             pass
-        elif self.select_strategy =='good':
+        elif self.service_select_strategy =='good':
             return 1
-        elif self.select_strategy == 'bad':
+        elif self.service_select_strategy == 'bad':
             return 0
-        elif self.select_strategy == 'random':
+        elif self.service_select_strategy == 'random':
             return random.randint(0, 1)
-        elif 'ignore0' in self.select_strategy:
-            probability = float(self.select_strategy.split('_')[1]) # probability that other robot will ignore Robot 0
+        elif 'ignore0' in self.service_select_strategy:
+            probability = float(self.service_select_strategy.split('_')[1]) # probability that other robot will ignore Robot 0
             if request_robot_id == 0 and random.random() < probability:
                 return 0
             else:
@@ -87,6 +77,16 @@ class StaticRobot(Robot):
 
     def check_node(self):
         return np.where((self.node_pos_matrix == self.current_pos).all(axis=1))[0]
+
+    def generate_task_to_robot(self):
+        task_to_robot = {}
+        for robot, tasks in self.robots_capable_tasks.items():
+            for task in tasks:
+                task_to_robot[task] = []
+        for robot, tasks in self.robots_capable_tasks.items():
+            for task in tasks:
+                task_to_robot[task].append(robot)
+        return task_to_robot
 
     def step(self, verbose=False, **kwargs):
         timestep = kwargs.get('timestep')
@@ -116,7 +116,7 @@ class StaticRobot(Robot):
                     required_tasks = random.sample(self.required_tasks_list,
                                                    random.randint(1, len(self.required_tasks_list)))
                     # todo: choose service provider based on trust
-                    name_list = self.choose_service_provider_random(required_tasks)
+                    name_list = self.choose_service_provider(required_tasks)
                     self.monitor.inform_request(self.id, name_list, self.current_pos, 1, timestep)
                     # todo: determine service_time based on astar distance
                     self.service_time = 1  # speed up the procedure
@@ -130,7 +130,7 @@ class StaticRobot(Robot):
                     required_tasks = random.sample(self.required_tasks_list,
                                                    random.randint(1, len(self.required_tasks_list)))
                     # todo: choose service provider based on trust
-                    name_list = self.choose_service_provider_random(required_tasks)
+                    name_list = self.choose_service_provider(required_tasks)
                     self.monitor.inform_request(self.id, name_list, self.current_pos, 0, timestep)
                     self.service_time = 1  # speed up the procedure
                     self.logger.info(

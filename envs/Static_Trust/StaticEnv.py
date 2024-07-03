@@ -5,6 +5,7 @@ from .StaticTrustRobot import StaticRobot
 from .StaticTrustMonitor import StaticMonitor
 from trust_algo.trust_config_dispatch import get_trust_algo_config
 from trust_algo.TrustFactory import TrustFactory
+from collections import deque
 import random
 
 class StaticEnv(BasicEnv):
@@ -38,7 +39,7 @@ class StaticEnv(BasicEnv):
         # Static Robot Init
         self.robots = [StaticRobot(i, self.algo_engine, self.node_pos_matrix, self.init_pos[i], self.untrust_list,
                                     self.monitor, self.trust_engine, self.robot_config) for i in range(self.robots_num)]
-        self.cycle_history = []
+        self.cycle_history = deque(maxlen=3)
         # set initial anomaly position and preceived by the monitor
         self.update_anomaly_random_report()
         # load log system
@@ -50,14 +51,12 @@ class StaticEnv(BasicEnv):
         update a new anomaly in the environment
         :return: None
         '''
-        self.logger.info(f"Last Anomaly: {self.anomaly}")
         self.anomaly = random.randint(0, self.nodes_num)
-        self.logger.info(f"New Anomaly: {self.anomaly}")
         self.monitor.update_anomaly_pos(self.anomaly)
 
     def step(self, verbose=False):
         self.timestep += 1
-        self.logger.info(f"Timestep {self.timestep}")
+        self.logger.info(f"Timestep {self.timestep}\nCurrent Anomaly {self.anomaly}")
 
         # robot move, update trust when calling for help
         robot_pos_records = []
@@ -71,12 +70,12 @@ class StaticEnv(BasicEnv):
             current_states = [r.state for r in self.robots]
             self.cycle_history.append(min([i == 'Patrolling' for i in current_states]))
             if self.timestep == 1:
-                if self.cycle_history[-1] == False:
+                if self.cycle_history[-1] == 0:
                     self.monitor.set_in_cycle_flag()
             else:
                 # if a cycle just end, now all the robots are patroling
                 if self.cycle_history[-1] > self.cycle_history[-2]:
-                    self.monitor.cancle_in_cycle_flag()
+                    self.monitor.cancel_in_cycle_flag()
                     self.update_anomaly_random_report()
                 # if a cycle just begin, now some robots are reporting & providing service
                 elif self.cycle_history[-1] < self.cycle_history[-2]:
