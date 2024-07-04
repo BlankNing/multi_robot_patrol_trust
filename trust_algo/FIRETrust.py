@@ -7,8 +7,8 @@ class FIRETrust(Trust):
         self.beta = 0
 
     def calculate_trust_value(self, observed_pos_history) -> float: # return (0,1)
-        if observed_pos_history is []:
-            return 1
+        if observed_pos_history == []:
+            return 1.0
         else:
             observed_pos_history_np = np.array(observed_pos_history)
             return sum(observed_pos_history_np[:,0])/len(observed_pos_history_np[:,0])

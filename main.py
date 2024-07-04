@@ -17,6 +17,8 @@ import logging
 from datetime import datetime
 import os
 
+print(config)
+
 # set the logging system
 current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 result_dir = os.path.join('results',current_time)
@@ -40,3 +42,6 @@ for t in range(config['total_steps']):
 # env.monitor.plot_trust_value(0)
 # env.monitor.create_patrol_screenshot(config, 200)
 # env.monitor.create_patrol_gif(config)
+
+no_zero_rewards = [i for i in env.monitor.rewards if i != 0]
+print(f'average reward: {sum(no_zero_rewards) / len(no_zero_rewards)}')
