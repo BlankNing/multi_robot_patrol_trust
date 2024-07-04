@@ -6,7 +6,6 @@ def get_trust_algo_config(config_file):
     patrol_algo = config_file['algo_config']['patrol_algo_name']
     init_pos = config_file['robot_config']['init_pos']
     robots_num = config_file['robot_config']['robots_num']
-
     trust_algo = config_file['trust_config']['trust_algo']
 
     if trust_algo == 'beta':
@@ -15,7 +14,7 @@ def get_trust_algo_config(config_file):
         }
         return trust_algo_config
 
-    elif patrol_algo == 'dempster-shafer':
+    elif patrol_algo == 'FIRE':
         pass
 
     else:

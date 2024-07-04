@@ -16,6 +16,7 @@ class StaticRobot(Robot):
         self.extra_reward = config_file['extra_reward']
         self.service_select_strategy = config_file['service_select_strategy']
         self.provider_select_strategy = config_file['provider_select_strategy']
+        self.service_strategy_based_on_trust = config_file['service_strategy_based_on_trust']
         self.monitor = monitor
         self.trust_engine = trust_engine
         self.service_time = 0
@@ -33,6 +34,15 @@ class StaticRobot(Robot):
         self.true_anomaly_pos = self.monitor.get_anomaly_pos()
         self.pgm_map_matrix = config_file['pgm_map_matrix']
 
+    # todo: define two strategies (1) threshold based (2) continuous map function based
+    def threshold_based_service_strategy(self, trust_value, threshold) -> int:
+        if trust_value < threshold:
+            return 0
+        else:
+            return 1
+
+    def function_based_service_strategy(self, trust_value) -> int:
+        return 1
 
     # todo: choose_service_provider based on trust engine
     def choose_service_provider(self, required_tasks):
@@ -61,7 +71,15 @@ class StaticRobot(Robot):
     # todo: choose_service_quality based on trust engine/random/determined
     def choose_service_quality(self, request_robot_id):
         if self.service_select_strategy == 'trust':
-            pass
+            history = self.monitor.get_history_as_provider(self.id, request_robot_id)
+            trust_value = self.trust_engine.calculate_trust_value(history)
+
+            # decide what to do: (1) reach threshold then dead/ (2) map function between the trust value and the strategy
+            if 'threshold' in self.service_strategy_based_on_trust:
+                return self.threshold_based_service_strategy(trust_value, threshold=float(self.service_strategy_based_on_trust['threshold']))
+            elif self.service_strategy_based_on_trust == 'function':
+                return self.function_based_service_strategy(trust_value)
+
         elif self.service_select_strategy =='good':
             return 1
         elif self.service_select_strategy == 'bad':

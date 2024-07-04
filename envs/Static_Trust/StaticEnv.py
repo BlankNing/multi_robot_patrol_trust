@@ -32,10 +32,10 @@ class StaticEnv(BasicEnv):
         self.has_anomaly = False
         # init anomaly
         self.anomaly = -1
-        # Init trust_engine
+        # Init trust_engine (instantiate trust engine and its configure file)
         self.trust_engine = TrustFactory().create_algo(self.trust_algo, self.trust_algo_config)
         # Static Env Monitor
-        self.monitor = StaticMonitor()
+        self.monitor = StaticMonitor(self.robot_config['robots_num'])
         # Static Robot Init
         self.robots = [StaticRobot(i, self.algo_engine, self.node_pos_matrix, self.init_pos[i], self.untrust_list,
                                     self.monitor, self.trust_engine, self.robot_config) for i in range(self.robots_num)]
@@ -82,7 +82,6 @@ class StaticEnv(BasicEnv):
                     self.monitor.set_in_cycle_flag()
 
         self.monitor.collect_robot_pos(robot_pos_records)
-        self.monitor.collect_robot_impression(env_interaction_impressions)
 
         # calculate total reward
         provider_reward_record = {}
@@ -100,8 +99,12 @@ class StaticEnv(BasicEnv):
                 reporter_reward_total += reporter_reward
                 provider_reward = i['reward']
                 total_reward += provider_reward + reporter_reward
-                provider_reward_record[i['service_robot']] = provider_reward
                 reporter_id = i['request_robot']
+                provider_id = i['service_robot']
+                provider_reward_record[provider_id] = provider_reward
+                # monitor collect history [service quality/is true anomaly, reward]
+                self.monitor.collect_reporter_history((reporter_id, provider_id, [service_quality, reporter_reward, i['time']]))
+                self.monitor.collect_provider_history((reporter_id, provider_id, [is_true_anomaly, provider_reward, i['time']]))
                 if service_quality == 1:
                     max_distance = i['distance'] if i['distance'] > max_distance else max_distance
         # if at this timestep, some robot come to help, the reporter have to wait until all the robots have came

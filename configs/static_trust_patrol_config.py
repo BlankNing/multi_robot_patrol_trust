@@ -25,6 +25,7 @@ static_trust_patrol_config = {
         'env_penalty': -5000,
         'service_select_strategy': 'random', # random, good, bad, ignore0_num, trust
         'provider_select_strategy': 'random', # random, determined, trust
+        'service_strategy_based_on_trust': {'threshold':0.8}, #threshold, map function
     },
     'algo_config':{
         'patrol_algo_name':patrol_algo,

@@ -37,9 +37,10 @@ cycle_num = 50
 
 def run_simulation(strategy):
     print(f'Testing strategy {strategy}')
-    # side effect will happen without this copy in multi-processing
+    # side effect will happen without this copy in multi-processing, careful
     local_config = copy.deepcopy(config)
-    local_config['robot_config']['select_strategy'] = strategy
+    # The failure is due to this key. How to avoid this in a dictionary?
+    local_config['robot_config']['service_select_strategy'] = strategy
     env = Env(local_config)
     raw_data = []
     data = []
