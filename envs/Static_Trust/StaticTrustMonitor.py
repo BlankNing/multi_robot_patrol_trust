@@ -81,9 +81,9 @@ class StaticMonitor(Monitor):
     def get_in_cycle_flag(self):
         return self.in_cycle_flag
 
-    def get_history_as_provider(self, provider_id, requester_id):
-        return self.provider_histories[provider_id][requester_id]
+    def get_history_as_provider(self, provider_id, reporter_id):
+        return self.provider_histories[provider_id][reporter_id]
 
-    def get_history_as_reporter(self, reporter_id, requester_id):
-        return self.reporter_histories[reporter_id][requester_id]
+    def get_history_as_reporter(self, reporter_id, provider_id):
+        return self.reporter_histories[reporter_id][provider_id]
 

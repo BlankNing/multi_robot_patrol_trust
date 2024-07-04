@@ -34,7 +34,6 @@ class StaticRobot(Robot):
         self.true_anomaly_pos = self.monitor.get_anomaly_pos()
         self.pgm_map_matrix = config_file['pgm_map_matrix']
 
-    # todo: define two strategies (1) threshold based (2) continuous map function based
     def threshold_based_service_strategy(self, trust_value, threshold) -> int:
         if trust_value < threshold:
             return 0
@@ -62,7 +61,22 @@ class StaticRobot(Robot):
             if self.id in robots:
                 robots.remove(self.id) # A robot cannot call it self to help
         if self.provider_select_strategy == 'trust':
-            pass
+            final_task_list = {}
+            for task, robots in task_to_robots.items():
+                if len(robots) == 1:
+                    final_task_list[task] = robots[0]
+                else:
+                    max_trust_value = -1
+                    most_trustworthy_robot_id = -1
+                    for i, provider_robot_id in enumerate(robots):
+                        history = self.monitor.get_history_as_reporter(self.id, provider_robot_id)
+                        if self.trust_engine.calculate_trust_value(history) > max_trust_value:
+                            max_trust_value = self.trust_engine.calculate_trust_value(history)
+                            most_trustworthy_robot_id = i
+                    final_task_list[task] = most_trustworthy_robot_id
+            return final_task_list
+
+
         elif self.provider_select_strategy == 'random':
             return {task: random.choice(task_to_robots[task]) for task in required_tasks}
         elif self.provider_select_strategy == 'determined':
@@ -73,8 +87,8 @@ class StaticRobot(Robot):
         if self.service_select_strategy == 'trust':
             history = self.monitor.get_history_as_provider(self.id, request_robot_id)
             trust_value = self.trust_engine.calculate_trust_value(history)
-
-            # decide what to do: (1) reach threshold then dead/ (2) map function between the trust value and the strategy
+            # decide what to do based on the trust value: (1) reach threshold then dead
+            # (2) map function between the trust value and the strategy
             if 'threshold' in self.service_strategy_based_on_trust:
                 return self.threshold_based_service_strategy(trust_value, threshold=float(self.service_strategy_based_on_trust['threshold']))
             elif self.service_strategy_based_on_trust == 'function':
