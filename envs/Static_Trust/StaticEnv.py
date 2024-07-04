@@ -5,6 +5,7 @@ from .StaticTrustRobot import StaticRobot
 from .StaticTrustMonitor import StaticMonitor
 from trust_algo.trust_config_dispatch import get_trust_algo_config
 from trust_algo.TrustFactory import TrustFactory
+from collections import deque
 import random
 
 class StaticEnv(BasicEnv):
@@ -31,14 +32,14 @@ class StaticEnv(BasicEnv):
         self.has_anomaly = False
         # init anomaly
         self.anomaly = -1
-        # Init trust_engine
+        # Init trust_engine (instantiate trust engine and its configure file)
         self.trust_engine = TrustFactory().create_algo(self.trust_algo, self.trust_algo_config)
         # Static Env Monitor
-        self.monitor = StaticMonitor()
+        self.monitor = StaticMonitor(self.robot_config['robots_num'])
         # Static Robot Init
         self.robots = [StaticRobot(i, self.algo_engine, self.node_pos_matrix, self.init_pos[i], self.untrust_list,
                                     self.monitor, self.trust_engine, self.robot_config) for i in range(self.robots_num)]
-        self.cycle_history = []
+        self.cycle_history = deque(maxlen=3)
         # set initial anomaly position and preceived by the monitor
         self.update_anomaly_random_report()
         # load log system
@@ -50,14 +51,12 @@ class StaticEnv(BasicEnv):
         update a new anomaly in the environment
         :return: None
         '''
-        self.logger.info(f"Last Anomaly: {self.anomaly}")
         self.anomaly = random.randint(0, self.nodes_num)
-        self.logger.info(f"New Anomaly: {self.anomaly}")
         self.monitor.update_anomaly_pos(self.anomaly)
 
     def step(self, verbose=False):
         self.timestep += 1
-        self.logger.info(f"Timestep {self.timestep}")
+        self.logger.info(f"Timestep {self.timestep}\nCurrent Anomaly {self.anomaly}")
 
         # robot move, update trust when calling for help
         robot_pos_records = []
@@ -71,19 +70,18 @@ class StaticEnv(BasicEnv):
             current_states = [r.state for r in self.robots]
             self.cycle_history.append(min([i == 'Patrolling' for i in current_states]))
             if self.timestep == 1:
-                if self.cycle_history[-1] == False:
+                if self.cycle_history[-1] == 0:
                     self.monitor.set_in_cycle_flag()
             else:
                 # if a cycle just end, now all the robots are patroling
                 if self.cycle_history[-1] > self.cycle_history[-2]:
-                    self.monitor.cancle_in_cycle_flag()
+                    self.monitor.cancel_in_cycle_flag()
                     self.update_anomaly_random_report()
                 # if a cycle just begin, now some robots are reporting & providing service
                 elif self.cycle_history[-1] < self.cycle_history[-2]:
                     self.monitor.set_in_cycle_flag()
 
         self.monitor.collect_robot_pos(robot_pos_records)
-        self.monitor.collect_robot_impression(env_interaction_impressions)
 
         # calculate total reward
         provider_reward_record = {}
@@ -101,8 +99,12 @@ class StaticEnv(BasicEnv):
                 reporter_reward_total += reporter_reward
                 provider_reward = i['reward']
                 total_reward += provider_reward + reporter_reward
-                provider_reward_record[i['service_robot']] = provider_reward
                 reporter_id = i['request_robot']
+                provider_id = i['service_robot']
+                provider_reward_record[provider_id] = provider_reward
+                # monitor collect history [service quality/is true anomaly, reward]
+                self.monitor.collect_reporter_history((reporter_id, provider_id, [service_quality, reporter_reward, i['time']]))
+                self.monitor.collect_provider_history((reporter_id, provider_id, [is_true_anomaly, provider_reward, i['time']]))
                 if service_quality == 1:
                     max_distance = i['distance'] if i['distance'] > max_distance else max_distance
         # if at this timestep, some robot come to help, the reporter have to wait until all the robots have came

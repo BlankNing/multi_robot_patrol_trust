@@ -9,8 +9,8 @@ import logging
 from .Robot import Robot
 from .Node import Node
 from .Monitor import Monitor
-from algo.AlgoFactory import AlgoFactory
-from algo.algo_config_dispatch import get_algo_config
+from patrol_algo.AlgoFactory import AlgoFactory
+from patrol_algo.algo_config_dispatch import get_algo_config
 
 
 # class Env:
