@@ -16,6 +16,7 @@ from configs.static_trust_patrol_config import static_trust_patrol_config as con
 import logging
 from datetime import datetime
 import os
+import random
 
 print(config)
 

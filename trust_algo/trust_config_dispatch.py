@@ -17,5 +17,8 @@ def get_trust_algo_config(config_file):
     elif patrol_algo == 'FIRE':
         pass
 
+    elif patrol_algo == 'YUSIGH':
+        pass
+
     else:
         return None
