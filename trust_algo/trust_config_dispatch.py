@@ -7,6 +7,8 @@ def get_trust_algo_config(config_file):
     init_pos = config_file['robot_config']['init_pos']
     robots_num = config_file['robot_config']['robots_num']
     trust_algo = config_file['trust_config']['trust_algo']
+    trust_mode = config_file['trust_config']['trust_mode']
+
 
     if trust_algo == 'beta':
         trust_algo_config = {
@@ -19,6 +21,12 @@ def get_trust_algo_config(config_file):
 
     elif patrol_algo == 'YUSIGH':
         pass
+
+    elif patrol_algo == 'TRAVOS':
+        trust_algo_config = {
+            'trust_mode': trust_mode,
+        }
+        return trust_algo_config
 
     else:
         return None

@@ -93,3 +93,31 @@ class StaticMonitor(Monitor):
     def get_history_as_reporter(self, reporter_id, provider_id):
         return self.reporter_histories[reporter_id][provider_id]
 
+    def get_history_as_reporter_witness(self, reporter_id, provider_id, communication_range):
+        witness_history = {}
+        try:
+            current_robot_pos = self.robot_pos[-1]
+        except: # spot anomaly in the first round, no pos information recorded yet
+            return []
+
+        reporter_pos = current_robot_pos[reporter_id]
+        for i, pos in enumerate(current_robot_pos):
+            distance = ((pos[0]-reporter_pos[0])**2 + (pos[1]-reporter_pos[1])**2) ** 0.5
+            if distance <= communication_range and i != reporter_id:
+                witness_history[i] = self.provider_histories[i][provider_id]
+        return witness_history
+    def get_history_as_provider_witness(self, provider_id, reporter_id, communication_range):
+        witness_history = {}
+        try:
+            current_robot_pos = self.robot_pos[-1]
+        except:  # spot anomaly in the first round, no pos information recorded yet
+            return []
+
+        provider_pos = current_robot_pos[reporter_id]
+        for i, pos in enumerate(current_robot_pos):
+            distance = ((pos[0] - provider_pos[0]) ** 2 + (pos[1] - provider_pos[1]) ** 2) ** 0.5
+            if distance <= communication_range and i != provider_id:
+                witness_history[i] = self.provider_histories[i][provider_id]
+        return witness_history
+
+

@@ -1,5 +1,6 @@
 from trust_algo.BetaTrust import BetaTrust
 from trust_algo.FIRETrust import FIRETrust
+from trust_algo.TRAVOSTrust import TRAVOSTrust
 
 class TrustFactory():
     @staticmethod
@@ -10,6 +11,8 @@ class TrustFactory():
             return FIRETrust()
         elif trust_algo == 'YUSIGNH':
             return FIRETrust()
+        elif trust_algo == 'TRAVOS':
+            return TRAVOSTrust(trust_algo_config)
         else:
             # for test
             return None

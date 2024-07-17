@@ -17,6 +17,7 @@ class StaticRobot(Robot):
         self.service_select_strategy = config_file['service_select_strategy']
         self.provider_select_strategy = config_file['provider_select_strategy']
         self.service_strategy_based_on_trust = config_file['service_strategy_based_on_trust']
+        self.communication_range = config_file['communication_range']
         self.monitor = monitor
         self.trust_engine = trust_engine
         self.service_time = 0
@@ -81,7 +82,9 @@ class StaticRobot(Robot):
                 else:
                     trust_value_record = {}
                     for i, provider_robot_id in enumerate(robots):
-                        history = self.monitor.get_history_as_reporter(self.id, provider_robot_id)
+                        direct_history = self.monitor.get_history_as_reporter(self.id, provider_robot_id)
+                        witness_history = self.monitor.get_history_as_reporter_witness(self.id, provider_robot_id, self.communication_range)
+                        history = {'direct': direct_history, 'witness': witness_history}
                         trust_value = self.trust_engine.calculate_trust_value(history)
                         trust_value_record[provider_robot_id] = trust_value
                     max_value = max(trust_value_record.values())

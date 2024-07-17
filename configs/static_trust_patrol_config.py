@@ -26,13 +26,15 @@ static_trust_patrol_config = {
         'service_select_strategy': 'trust', # random, good, bad, ignore0_num, trust
         'provider_select_strategy': 'trust', # random, determined, trust
         'service_strategy_based_on_trust': {'threshold':0.8}, #{threshold: 0.3}, {function:which function}
+        'communication_range':10000,
     },
     'algo_config':{
         'patrol_algo_name':patrol_algo,
     },
     'trust_config':{
         'untrust_list': [0],
-        'trust_algo':'FIRE', # FIRE TRAVOS YUSIGNH BRS REGRET
+        'trust_algo': 'TRAVOS',
+        'trust_mode': 'IT+WR',
     },
     'total_steps':timesteps,
 
