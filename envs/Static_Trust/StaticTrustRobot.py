@@ -53,6 +53,16 @@ class StaticRobot(Robot):
         now we received a required_tasks list [1,2]
         need to return {1:[1,5],2:[2,6]} -> {1:1,2:2}
         :return: task_ro_robot_assignment {task: robot_id}
+                    trust_value_record_example = {
+                        1: {  # Task ID 1
+                            5: 0.85,  # Trust value for robot 5
+                            7: 0.78   # Trust value for robot 7
+                        },
+                        2: {  # Task ID 2
+                            2: 0.92,  # Trust value for robot 2
+                            6: 0.89   # Trust value for robot 6
+                        }
+                    }
         '''
         # 1. delete the other unrequired task
         task_to_robots = {key: self.task_to_robot[key] for key in required_tasks if key in self.task_to_robot}
@@ -155,23 +165,24 @@ class StaticRobot(Robot):
                     self.state = 'True Requesting'
                     required_tasks = random.sample(self.required_tasks_list,
                                                    random.randint(1, len(self.required_tasks_list)))
-                    # todo: choose service provider based on trust
+                    # choose service provider based on trust
                     name_list, trust_record = self.choose_service_provider(required_tasks)
-                    self.monitor.inform_request(self.id, name_list, self.current_pos, 1, timestep)
-                    # todo: determine service_time based on astar distance
+                    self.monitor.inform_request(self.id, name_list, self.current_pos, 1, timestep, trust_record)
+                    # determine service_time based on astar distance
                     self.service_time = 1  # speed up the procedure
                     self.logger.info(
                         f"Robot {self.id}, Current Position: {self.current_pos}, Current State: {self.state}, Last Node: {self.last_node},"
                         f" Required tasks: {required_tasks}, Required robot namelist: {name_list}, True/False anomaly: True, Trust record: {trust_record}")
             else:
+                # may generate false alarm
                 if random.random() < self.false_positve and not anomaly_detect_cycle_flag:
                     # set the state to reporting
                     self.state = 'False Requesting'
                     required_tasks = random.sample(self.required_tasks_list,
                                                    random.randint(1, len(self.required_tasks_list)))
-                    # todo: choose service provider based on trust
+                    # choose service provider based on trust
                     name_list, trust_record = self.choose_service_provider(required_tasks)
-                    self.monitor.inform_request(self.id, name_list, self.current_pos, 0, timestep)
+                    self.monitor.inform_request(self.id, name_list, self.current_pos, 0, timestep, trust_record)
                     self.service_time = 1  # speed up the procedure
                     self.logger.info(
                         f"Robot {self.id}, Current Position: {self.current_pos}, Current State: {self.state}, Last Node: {self.last_node},"
@@ -183,18 +194,19 @@ class StaticRobot(Robot):
             # move 1 step
             self.current_pos = self.path_list[0]
             self.path_list.pop(0)
-            self.logger.info(
-                f"Robot {self.id}, Current Position: {self.current_pos}, Current State: {self.state}, Last Node: {self.last_node},")
+            # self.logger.info(
+            #     f"Robot {self.id}, Current Position: {self.current_pos}, Current State: {self.state}, Last Node: {self.last_node},")
 
-        # If some one is requesting for help at this timestep, switch to provider mode
+        # If someone is requesting for help at this timestep, switch to provider mode
         if self.monitor.check_request(self.id, timestep) != None:
             self.state = 'Providing'
             current_request = self.monitor.check_request(self.id, timestep)
             impression = current_request
             request_robot_id = current_request['request_robot']
-            # todo: choose_service_quality based on trust
+            # choose_service_quality based on trust
             service_quality, trust_record = self.choose_service_quality(request_robot_id)
             impression['service_quality'] = service_quality
+            impression['trust_value_towards_reporter'] = trust_record
 
             is_true_anomaly = impression['is_true_anomaly']
 
@@ -222,7 +234,7 @@ class StaticRobot(Robot):
 
             self.logger.info(
                 f"Robot {self.id}, Current Position: {self.current_pos}, Current State: {self.state}, Last Node: {self.last_node},"
-                f" Request record: {impression}, Trust record: {trust_record}")
+                f" Request record: {impression}")
 
         # For visualisation
         if verbose == True:

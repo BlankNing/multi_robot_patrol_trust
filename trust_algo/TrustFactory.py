@@ -8,6 +8,8 @@ class TrustFactory():
             return BetaTrust(trust_algo_config)
         elif trust_algo == 'FIRE':
             return FIRETrust()
+        elif trust_algo == 'YUSIGNH':
+            return FIRETrust()
         else:
             # for test
             return None

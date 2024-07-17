@@ -14,6 +14,7 @@ class StaticMonitor(Monitor):
         # history data for trust model calculation: {1:{2:[[come or not/true or false, reward, timestep],[]],3:[histories]...}}
         self.reporter_histories = self.generate_history_dict()
         self.provider_histories = self.generate_history_dict()
+        self.informative_impressions = []
 
     def generate_history_dict(self):
         '''
@@ -38,6 +39,9 @@ class StaticMonitor(Monitor):
     def collect_reward(self, single_reward):
         self.rewards.append(single_reward)
 
+    def collect_infomative_impressions(self, impression):
+        self.informative_impressions.append(impression)
+
     def check_request(self, service_robot_id, time_step):
         try:
             if self.current_request[service_robot_id]['time'] == time_step - 1:
@@ -45,7 +49,7 @@ class StaticMonitor(Monitor):
         except:
             return None
 
-    def inform_request(self, request_robot_id, name_list, request_pos, is_true_anomaly, timestep):
+    def inform_request(self, request_robot_id, name_list, request_pos, is_true_anomaly, timestep, trust_value_towards_provider):
         '''
         :param request_robot_id:
         :param name_list: {1:0, 2:2, 3:1}
@@ -58,7 +62,8 @@ class StaticMonitor(Monitor):
 
         for task_id, robot_id in name_list.items():
             self.current_request[robot_id] = {'request_robot':request_robot_id, 'service_robot': robot_id, 'time': timestep,
-                                          'task':task_id, 'request_position': request_pos, 'is_true_anomaly': is_true_anomaly}
+                                          'task':task_id, 'request_position': request_pos, 'is_true_anomaly': is_true_anomaly,
+                                              'trust_value_towards_provider': trust_value_towards_provider,}
 
 
     def collect_reporter_history(self, reporter_history):

@@ -91,6 +91,8 @@ class StaticEnv(BasicEnv):
         reporter_reward_total = 0
         reporter_id = -1
         for i in env_interaction_impressions:
+            # i example: Request record: {'request_robot': 0, 'service_robot': 1, 'time': 1, 'task': 1, 'request_position': (160, 140),
+            # 'is_true_anomaly': 0, 'service_quality': 1, 'distance': 122, 'reward': -244}, Trust record: {0: 1.0}
             if i != {}:
                 is_true_anomaly = i['is_true_anomaly'] # all the same
                 service_quality = i['service_quality'] # not the same
@@ -105,6 +107,7 @@ class StaticEnv(BasicEnv):
                 # monitor collect history [service quality/is true anomaly, reward]
                 self.monitor.collect_reporter_history((reporter_id, provider_id, [service_quality, reporter_reward, i['time']]))
                 self.monitor.collect_provider_history((reporter_id, provider_id, [is_true_anomaly, provider_reward, i['time']]))
+                self.monitor.collect_infomative_impressions(i)
                 if service_quality == 1:
                     max_distance = i['distance'] if i['distance'] > max_distance else max_distance
         # if at this timestep, some robot come to help, the reporter have to wait until all the robots have came
