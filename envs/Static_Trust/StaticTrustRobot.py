@@ -18,6 +18,7 @@ class StaticRobot(Robot):
         self.provider_select_strategy = config_file['provider_select_strategy']
         self.service_strategy_based_on_trust = config_file['service_strategy_based_on_trust']
         self.communication_range = config_file['communication_range']
+        self.provider_select_randomness = config_file['provider_select_randomness']
         self.monitor = monitor
         self.trust_engine = trust_engine
         self.service_time = 0
@@ -45,7 +46,7 @@ class StaticRobot(Robot):
         return 1
 
     # todo: choose_service_provider based on trust engine
-    def choose_service_provider(self, required_tasks):
+    def choose_service_provider(self, required_tasks, timestep):
         '''
         :param required_tasks: list eg: [0,2,3]; task_to_robot {task:[all robots that are capable of this task]}
         robot capable task: {robot id: [capable task list]}
@@ -54,7 +55,7 @@ class StaticRobot(Robot):
         now we received a required_tasks list [1,2]
         need to return {1:[1,5],2:[2,6]} -> {1:1,2:2}
         :return: task_ro_robot_assignment {task: robot_id}
-                    trust_value_record_example = {
+                    trust_value_records_example = {
                         1: {  # Task ID 1
                             5: 0.85,  # Trust value for robot 5
                             7: 0.78   # Trust value for robot 7
@@ -81,17 +82,38 @@ class StaticRobot(Robot):
                     final_task_list[task] = robots[0]
                 else:
                     trust_value_record = {}
+                    has_no_trust = []
+                    # calculate the trust values of different robots working on the same task, store in trust_value
                     for i, provider_robot_id in enumerate(robots):
-                        direct_history = self.monitor.get_history_as_reporter(self.id, provider_robot_id)
-                        witness_history = self.monitor.get_history_as_reporter_witness(self.id, provider_robot_id, self.communication_range)
-                        history = {'direct': direct_history, 'witness': witness_history}
-                        trust_value = self.trust_engine.calculate_trust_value(history)
+                        trust_value, reliability = self.trust_engine.calculate_trust_value_reporter(self.id, provider_robot_id, task, timestep, self.robots_capable_tasks)
+                        # if there's no history, set trust value to None
                         trust_value_record[provider_robot_id] = trust_value
-                    max_value = max(trust_value_record.values())
-                    max_keys = [key for key, value in trust_value_record.items() if value == max_value]
-                    most_trustworthy_robot_id = random.choice(max_keys)
-                    final_task_list[task] = most_trustworthy_robot_id
+                        if np.isnan(trust_value):  # use isnan()
+                            has_no_trust.append(provider_robot_id)
+
+                    # choose provider based on determined or boltzmann methods
+                    if self.provider_select_randomness == 'determined':
+                        try:
+                            max_value = max(trust_value_record.values())
+                            max_keys = [key for key, value in trust_value_record.items() if value == max_value]
+                            most_trustworthy_robot_id = random.choice(max_keys)
+                        except:
+                            most_trustworthy_robot_id = random.choice(has_no_trust)
+                        final_task_list[task] = most_trustworthy_robot_id
+
+                    elif self.provider_select_randomness == 'boltzmann':
+                        try:
+                            max_value = max(trust_value_record.values())
+                            max_keys = [key for key, value in trust_value_record.items() if value == max_value]
+                            # simple boltzmann, 70% 30%
+                            chosen_list = random.choices([max_keys, has_no_trust], weights=[0.85, 0.15])[0]
+                            most_trustworthy_robot_id = random.choice(chosen_list)
+                        except:
+                            most_trustworthy_robot_id = random.choice(has_no_trust)
+                        final_task_list[task] = most_trustworthy_robot_id
+
                     trust_value_records[task] = trust_value_record
+
             return final_task_list, trust_value_records
 
         # select provider randomly across all the available robots
@@ -103,16 +125,15 @@ class StaticRobot(Robot):
             return {1: 1, 2: 2, 3: 3, 0: 4}, 'determined'
 
     # todo: choose_service_quality based on trust engine/random/determined
-    def choose_service_quality(self, request_robot_id):
+    def choose_service_quality(self, request_robot_id, task_info, timestep):
         if self.service_select_strategy == 'trust':
-            history = self.monitor.get_history_as_provider(self.id, request_robot_id)
-            trust_value = self.trust_engine.calculate_trust_value(history)
+            trust_value, reliability = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
             # decide what to do based on the trust value: (1) reach threshold then dead
             # (2) map function between the trust value and the strategy
             if 'threshold' in self.service_strategy_based_on_trust:
-                return self.threshold_based_service_strategy(trust_value, threshold=float(self.service_strategy_based_on_trust['threshold'])),{request_robot_id: trust_value}
+                return self.threshold_based_service_strategy(trust_value, threshold=float(self.service_strategy_based_on_trust['threshold'])),trust_value
             elif self.service_strategy_based_on_trust == 'function':
-                return self.function_based_service_strategy(trust_value),{request_robot_id: trust_value}
+                return self.function_based_service_strategy(trust_value), trust_value
 
         elif self.service_select_strategy =='good':
             return 1, 'good'
@@ -169,12 +190,12 @@ class StaticRobot(Robot):
                     required_tasks = random.sample(self.required_tasks_list,
                                                    random.randint(1, len(self.required_tasks_list)))
                     # choose service provider based on trust
-                    name_list, trust_record = self.choose_service_provider(required_tasks)
+                    name_list, trust_record = self.choose_service_provider(required_tasks, timestep)
                     self.monitor.inform_request(self.id, name_list, self.current_pos, 1, timestep, trust_record)
                     # determine service_time based on astar distance
                     self.service_time = 1  # speed up the procedure
                     self.logger.info(
-                        f"Robot {self.id}, Current Position: {self.current_pos}, Current State: {self.state}, Last Node: {self.last_node},"
+                        f"Reporter_id {self.id}, Reporter Position: {self.current_pos}, Last Node: {self.last_node},"
                         f" Required tasks: {required_tasks}, Required robot namelist: {name_list}, True/False anomaly: True, Trust record: {trust_record}")
             else:
                 # may generate false alarm
@@ -184,11 +205,11 @@ class StaticRobot(Robot):
                     required_tasks = random.sample(self.required_tasks_list,
                                                    random.randint(1, len(self.required_tasks_list)))
                     # choose service provider based on trust
-                    name_list, trust_record = self.choose_service_provider(required_tasks)
+                    name_list, trust_record = self.choose_service_provider(required_tasks, timestep)
                     self.monitor.inform_request(self.id, name_list, self.current_pos, 0, timestep, trust_record)
                     self.service_time = 1  # speed up the procedure
                     self.logger.info(
-                        f"Robot {self.id}, Current Position: {self.current_pos}, Current State: {self.state}, Last Node: {self.last_node},"
+                        f"Reporter_id {self.id}, Reporter Position: {self.current_pos}, Last Node: {self.last_node},"
                         f" Required tasks: {required_tasks}, Required robot namelist: {name_list}, True/False anomaly: False, Trust record: {trust_record}")
 
         # if didn't find anomaly or providing services, robot move
@@ -207,10 +228,11 @@ class StaticRobot(Robot):
             impression = current_request
             request_robot_id = current_request['request_robot']
             # choose_service_quality based on trust
-            service_quality, trust_record = self.choose_service_quality(request_robot_id)
+            service_quality, trust_record = self.choose_service_quality(request_robot_id, current_request['task'], timestep)
             impression['service_quality'] = service_quality
             impression['trust_value_towards_reporter'] = trust_record
-
+            impression['service_position'] = self.current_pos
+            impression['service_time'] = timestep
             is_true_anomaly = impression['is_true_anomaly']
 
             if service_quality == 1:
@@ -230,13 +252,14 @@ class StaticRobot(Robot):
 
             elif service_quality == 0:
                 # if bad service, calculate the reward of this interaction
+                impression['distance'] = 0
                 if is_true_anomaly == 1:
                     impression['reward'] = self.env_penalty
                 else:
                     impression['reward'] = 0
 
             self.logger.info(
-                f"Robot {self.id}, Current Position: {self.current_pos}, Current State: {self.state}, Last Node: {self.last_node},"
+                f"Provider_id {self.id}, Provider Position: {self.current_pos}, Last Node: {self.last_node},"
                 f" Request record: {impression}")
 
         # For visualisation

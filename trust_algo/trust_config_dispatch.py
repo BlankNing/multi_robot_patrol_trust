@@ -10,19 +10,19 @@ def get_trust_algo_config(config_file):
     trust_mode = config_file['trust_config']['trust_mode']
 
 
-    if trust_algo == 'beta':
+    if trust_algo == 'BETA':
         trust_algo_config = {
             None,
         }
         return trust_algo_config
 
-    elif patrol_algo == 'FIRE':
+    elif trust_algo == 'FIRE':
+        return {}
+
+    elif trust_algo == 'YUSIGH':
         pass
 
-    elif patrol_algo == 'YUSIGH':
-        pass
-
-    elif patrol_algo == 'TRAVOS':
+    elif trust_algo == 'TRAVOS':
         trust_algo_config = {
             'trust_mode': trust_mode,
         }

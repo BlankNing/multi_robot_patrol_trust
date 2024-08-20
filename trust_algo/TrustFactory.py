@@ -8,7 +8,7 @@ class TrustFactory():
         if trust_algo == 'BETA':
             return BetaTrust(trust_algo_config)
         elif trust_algo == 'FIRE':
-            return FIRETrust()
+            return FIRETrust(trust_algo_config)
         elif trust_algo == 'YUSIGNH':
             return FIRETrust()
         elif trust_algo == 'TRAVOS':

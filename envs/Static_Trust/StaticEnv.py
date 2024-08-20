@@ -27,15 +27,17 @@ class StaticEnv(BasicEnv):
         self.trust_algo = config_file['trust_config']['trust_algo']
         self.trust_algo_config = get_trust_algo_config(config_file)
         config_file['robot_config']['pgm_map_matrix'] = self.pgm_map_matrix
+        self.max_distance = sum(self.pgm_map_matrix.shape)
         self.robot_config = config_file['robot_config']
         # only 1 robot report anomaly at one time
         self.has_anomaly = False
         # init anomaly
         self.anomaly = -1
-        # Init trust_engine (instantiate trust engine and its configure file)
-        self.trust_engine = TrustFactory().create_algo(self.trust_algo, self.trust_algo_config)
         # Static Env Monitor
         self.monitor = StaticMonitor(self.robot_config['robots_num'])
+        # Init trust_engine (instantiate trust engine and its configure file)
+        self.trust_algo_config['history_monitor'] = self.monitor
+        self.trust_engine = TrustFactory().create_algo(self.trust_algo, self.trust_algo_config)
         # Static Robot Init
         self.robots = [StaticRobot(i, self.algo_engine, self.node_pos_matrix, self.init_pos[i], self.untrust_list,
                                     self.monitor, self.trust_engine, self.robot_config) for i in range(self.robots_num)]
@@ -55,17 +57,19 @@ class StaticEnv(BasicEnv):
         self.monitor.update_anomaly_pos(self.anomaly)
 
     def step(self, verbose=False):
+        interaction_histories = []
         self.timestep += 1
         self.logger.info(f"Timestep {self.timestep}\nCurrent Anomaly {self.anomaly}")
 
         # robot move, update trust when calling for help
+        interaction_flag = False
         robot_pos_records = []
         env_interaction_impressions= []
         for robot in self.robots:
             robot_pos_record, env_interaction_impression = robot.step(verbose=verbose, timestep=self.timestep)
             robot_pos_records.append(robot_pos_record)
             env_interaction_impressions.append(env_interaction_impression)
-
+            interaction_flag = not all(element == {} for element in env_interaction_impressions)
             # check if we are in an anomaly detection cycle
             current_states = [r.state for r in self.robots]
             self.cycle_history.append(min([i == 'Patrolling' for i in current_states]))
@@ -83,40 +87,47 @@ class StaticEnv(BasicEnv):
 
         self.monitor.collect_robot_pos(robot_pos_records)
 
-        # calculate total reward
-        provider_reward_record = {}
-        reporter_reward_record = {}
-        total_reward = 0
-        max_distance = 0
-        reporter_reward_total = 0
-        reporter_id = -1
-        for i in env_interaction_impressions:
-            # i example: Request record: {'request_robot': 0, 'service_robot': 1, 'time': 1, 'task': 1, 'request_position': (160, 140),
-            # 'is_true_anomaly': 0, 'service_quality': 1, 'distance': 122, 'reward': -244}, Trust record: {0: 1.0}
-            if i != {}:
-                is_true_anomaly = i['is_true_anomaly'] # all the same
-                service_quality = i['service_quality'] # not the same
-                reporter_reward_matrix = {(0, 0): 0, (0, 1): 0, (1, 0): self.robot_config['env_penalty'], (1, 1): self.robot_config['extra_reward']}
-                reporter_reward = reporter_reward_matrix[(is_true_anomaly, service_quality)]
-                reporter_reward_total += reporter_reward
-                provider_reward = i['reward']
-                total_reward += provider_reward + reporter_reward
-                reporter_id = i['request_robot']
-                provider_id = i['service_robot']
-                provider_reward_record[provider_id] = provider_reward
-                # monitor collect history [service quality/is true anomaly, reward]
-                self.monitor.collect_reporter_history((reporter_id, provider_id, [service_quality, reporter_reward, i['time']]))
-                self.monitor.collect_provider_history((reporter_id, provider_id, [is_true_anomaly, provider_reward, i['time']]))
-                self.monitor.collect_infomative_impressions(i)
-                if service_quality == 1:
-                    max_distance = i['distance'] if i['distance'] > max_distance else max_distance
-        # if at this timestep, some robot come to help, the reporter have to wait until all the robots have came
-        # thus total_reward - max_distance for all the robots coming to help
-        total_reward -= max_distance
-        reporter_reward_total -= max_distance
-        reporter_reward_record[reporter_id] = reporter_reward_total
-        self.monitor.collect_reward(total_reward)
-        self.logger.info(f"Reward: Reporter {reporter_reward_record}; Provider {provider_reward_record},")
+        # calculate total reward if interaction happens
+        if interaction_flag:
+            max_distance = 0
+            max_distance_index = -1
+            cnt = 0
+            for index, i in enumerate(env_interaction_impressions):
+                # i example: Request record: {'request_robot': 0, 'service_robot': 1, 'time': 1, 'task': 1, 'request_position': (160, 140),
+                # 'is_true_anomaly': 0, 'service_quality': 1, 'distance': 122, 'reward': -244}, Trust record: {0: 1.0}
+                if i != {}:
+                    reporter_reward_matrix = {(0, 0): 0, (0, 1): 0, (1, 0): self.robot_config['env_penalty'], (1, 1): self.robot_config['extra_reward']}
+
+                    interaction_history = {
+                        'is_true_anomaly': i['is_true_anomaly'],
+                        'reporter_id': i['request_robot'],
+                        'provider_id': i['service_robot'],
+                        'task_id': i['task'],
+                        'report_time': i['time'],
+                        'provide_time': i['service_time'],
+                        'report_position': i['request_position'],
+                        'provide_position': i['service_position'],
+                        'trust_towards_reporter': i['trust_value_towards_reporter'],
+                        'trust_towards_provider': i['trust_value_to_provider'],
+                        'provider_action': i['service_quality'],
+                        'provider_reward': i['reward'],
+                        'reporter_reward': reporter_reward_matrix[(i['is_true_anomaly'], i['service_quality'])],
+                        'rating_to_reporter': 1 if i['is_true_anomaly'] == 1 - i['distance']/self.max_distance else -1, # simple rating system, can regularise it
+                        'rating_to_provider': 1 if i['service_quality'] == 1 - i['distance']/self.max_distance else -1, # complex rating system, related with max
+                        'distance_penalty': i['distance'],
+                    }
+                    interaction_histories.append(interaction_history)
+                    # monitor collect history [service quality/is true anomaly, reward]
+                    if i['service_quality'] == 1:
+                        max_distance = i['distance'] if i['distance'] > max_distance else max_distance
+                        max_distance_index = cnt
+                    cnt += 1
+
+            # if at this timestep, some robot come to help, the reporter have to wait until all the robots have came
+            # thus total_reward - max_distance for all the robots coming to help
+            interaction_histories[max_distance_index]['reporter_reward'] -= max_distance
+            self.monitor.collect_histories(interaction_histories)
+
 
         # node record
         node_idleness_records = []

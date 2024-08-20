@@ -29,6 +29,10 @@ log_file_path = os.path.join(result_dir, 'experiment.log')
 logging.basicConfig(filename = log_file_path, level=logging.INFO,
                     format = '%(message)s')
 
+try:
+    random.seed(config['seed'])
+except:
+    pass
 # prepare environment, robot, algo, trust model
 env = Env(config)
 
@@ -44,5 +48,7 @@ for t in range(config['total_steps']):
 # env.monitor.create_patrol_screenshot(config, 200)
 # env.monitor.create_patrol_gif(config)
 
-no_zero_rewards = [i for i in env.monitor.rewards if i != 0]
-print(f'average reward: {sum(no_zero_rewards) / len(no_zero_rewards)}')
+print(env.monitor.histories)
+# env.monitor.reward_with_untrustworthy_plot(0)
+# env.monitor.trust_with_untrustworthy_plot(0)
+env.monitor.combined_reward_trust_with_all_robot_plot(0, config['robot_config']['service_select_strategy'])

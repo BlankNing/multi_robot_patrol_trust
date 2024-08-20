@@ -2,7 +2,7 @@ from utils.load_map import *
 
 map_name = 'museum'
 patrol_algo = 'partition'
-timesteps = 3000
+timesteps = 5000
 robots_num = 8
 
 static_trust_patrol_config = {
@@ -21,21 +21,22 @@ static_trust_patrol_config = {
         'false_positive_abnormal': 0.7,
         'required_tasks_list': [i for i in range(4)],
         'robots_capable_tasks':{i : [i % 4] for i in range(8)},
-        'extra_reward': 5000,
-        'env_penalty': -5000,
+        'extra_reward': 4000,
+        'env_penalty': -4000,
         'service_select_strategy': 'trust', # random, good, bad, ignore0_num, trust
         'provider_select_strategy': 'trust', # random, determined, trust
-        'service_strategy_based_on_trust': {'threshold':0.8}, #{threshold: 0.3}, {function:which function}
-        'communication_range':10000,
+        'provider_select_randomness': 'determined', # determined, boltzmann
+        'service_strategy_based_on_trust': {'threshold':0}, #{threshold: 0.3}, {function:which function}
+        'communication_range': 10000,
     },
     'algo_config':{
         'patrol_algo_name':patrol_algo,
     },
     'trust_config':{
         'untrust_list': [0],
-        'trust_algo': 'TRAVOS',
+        'trust_algo': 'FIRE',
         'trust_mode': 'IT+WR',
     },
     'total_steps':timesteps,
-
+    'seed':600, #1000,3407,600
 }
