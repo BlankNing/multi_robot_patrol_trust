@@ -19,8 +19,8 @@ def get_trust_algo_config(config_file):
     elif trust_algo == 'FIRE':
         return {}
 
-    elif trust_algo == 'YUSIGH':
-        pass
+    elif trust_algo == 'YUSINGH':
+        return {}
 
     elif trust_algo == 'TRAVOS':
         trust_algo_config = {

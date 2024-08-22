@@ -137,7 +137,57 @@ class StaticRobot(Robot):
 
         return final_task_list, trust_value_records
 
+    def choose_service_provider_YUSINGH(self, timestep, task_to_robots):
+        final_task_list = {} # {1:1, 2:5, 3:6}
+        trust_value_records = {} # {1 :{1:{'trust_value':xxx, 'reliability':xxxx}, 4:{'trust_value':xxx, 'reliability':xxxx}}, 2: {}}
+        for task, robots in task_to_robots.items():
+            if len(robots) == 1:
+                final_task_list[task] = robots[0]
+            else:
+                trust_value_record = {}
+                trust_value_record_key = {}
+                has_no_trust = []
 
+                # calculate the trust values of different robots working on the same task, store in trust_value
+                for i, provider_robot_id in enumerate(robots):
+                    trust_record = self.trust_engine.calculate_trust_value_reporter(self.id, provider_robot_id, task,
+                                                                                    timestep, self.robots_capable_tasks)
+                    trust_value = trust_record['trust_value']
+                    # if there's no history, set trust value to np.nan
+                    trust_value_record[provider_robot_id] = trust_record
+                    if np.isnan(trust_value):  # use isnan()
+                        has_no_trust.append(provider_robot_id)
+                    else:
+                        trust_value_record_key[provider_robot_id] = trust_value
+
+                # after getting the trust value towards different robots for the same task
+                # choose provider based on determined or boltzmann methods
+                if self.provider_select_randomness == 'determined':
+                    try:
+                        max_value = max(trust_value_record.values())
+                        max_keys = [key for key, value in trust_value_record.items() if value == max_value]
+                        most_trustworthy_robot_id = random.choice(max_keys)
+                    except:
+                        most_trustworthy_robot_id = random.choice(has_no_trust)
+                    final_task_list[task] = most_trustworthy_robot_id
+
+                elif self.provider_select_randomness == 'boltzmann':
+                    try:
+                        max_value = max(trust_value_record_key.values())
+                        max_keys = [key for key, value in trust_value_record_key.items() if value == max_value]
+                        # simple boltzmann, 70% 30%
+                        if has_no_trust != []:
+                            chosen_list = random.choices([max_keys, has_no_trust], weights=[0.85, 0.15])[0]
+                        else:
+                            chosen_list = max_keys
+                        most_trustworthy_robot_id = random.choice(chosen_list)
+                    except:
+                        most_trustworthy_robot_id = random.choice(has_no_trust)
+                    final_task_list[task] = most_trustworthy_robot_id
+
+                trust_value_records[task] = trust_value_record
+
+        return final_task_list, trust_value_records
 
 
     # todo: choose_service_provider based on trust engine
@@ -174,6 +224,9 @@ class StaticRobot(Robot):
                 return self.choose_service_provider_FIRE(timestep, task_to_robots)
             elif self.trust_algo =='TRAVOS':
                 return self.choose_service_provider_TRAVOS(timestep, task_to_robots)
+            elif self.trust_algo =='YUSINGH':
+                return self.choose_service_provider_YUSINGH(timestep, task_to_robots)
+
 
         # select provider randomly across all the available robots
         elif self.provider_select_strategy == 'random':
@@ -194,6 +247,8 @@ class StaticRobot(Robot):
                     trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id,
                                                                                            task_info, timestep,
                                                                                            self.robots_capable_tasks)
+            elif self.trust_algo == 'YUSINGH':
+                trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
             # decide what to do based on the trust value: (1) reach threshold then dead
             # (2) map function between the trust value and the strategy
             trust_value = trust_record['trust_value']

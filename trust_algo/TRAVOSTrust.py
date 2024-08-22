@@ -74,13 +74,14 @@ class TRAVOSTrust(Trust):
         M += 1
         reputaion_trust = N / (N + M)
 
-        modified_trust = {}
-        modified_trust['trust_value'] = reputaion_trust
-        modified_trust['trust_type'] = 'reputation'
-        modified_trust['direct_trust_value'] = direct_trust['trust_value']
-        modified_trust['direct_trust_confidence'] = direct_trust['direct_confidence']
-        modified_trust['N'] = N
-        modified_trust['M'] = M
+        modified_trust = {
+            'trust_value': reputaion_trust,
+            'trust_type': 'reputation',
+            'direct_trust_value': direct_trust['trust_value'],
+            'direct_trust_confidence': direct_trust['direct_confidence'],
+            'N': N,
+            'M': M
+        }
 
         return modified_trust
 

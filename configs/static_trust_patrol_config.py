@@ -4,7 +4,7 @@ map_name = 'museum'
 patrol_algo = 'partition'
 timesteps = 5000
 robots_num = 8
-trust_algo = 'TRAVOS'
+trust_algo = 'YUSINGH'
 
 static_trust_patrol_config = {
     'env_config':{
