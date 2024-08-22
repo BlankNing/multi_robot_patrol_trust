@@ -96,7 +96,18 @@ class StaticEnv(BasicEnv):
                 # i example: Request record: {'request_robot': 0, 'service_robot': 1, 'time': 1, 'task': 1, 'request_position': (160, 140),
                 # 'is_true_anomaly': 0, 'service_quality': 1, 'distance': 122, 'reward': -244}, Trust record: {0: 1.0}
                 if i != {}:
+                    # reward system
                     reporter_reward_matrix = {(0, 0): 0, (0, 1): 0, (1, 0): self.robot_config['env_penalty'], (1, 1): self.robot_config['extra_reward']}
+
+                    # rating system
+                    if i['is_true_anomaly'] == 1 and i['service_quality'] == 1:
+                        rating_to_provider = 1 - i['distance']/self.max_distance
+                    elif i['is_true_anomaly'] == 1 and i['service_quality'] == 0:
+                        rating_to_provider = -1
+                    elif i['is_true_anomaly'] == 0 and i['service_quality'] == 1:
+                        rating_to_provider = 1 - i['distance']/self.max_distance
+                    else:
+                        rating_to_provider = 0
 
                     interaction_history = {
                         'is_true_anomaly': i['is_true_anomaly'],
@@ -112,11 +123,15 @@ class StaticEnv(BasicEnv):
                         'provider_action': i['service_quality'],
                         'provider_reward': i['reward'],
                         'reporter_reward': reporter_reward_matrix[(i['is_true_anomaly'], i['service_quality'])],
-                        'rating_to_reporter': 1 if i['is_true_anomaly'] == 1 - i['distance']/self.max_distance else -1, # simple rating system, can regularise it
-                        'rating_to_provider': 1 if i['service_quality'] == 1 - i['distance']/self.max_distance else -1, # complex rating system, related with max
+                        'rating_to_reporter': 1 - i['distance']/self.max_distance if i['is_true_anomaly'] == 1  else -1, # simple rating system, can regularise it
+                        'rating_to_provider': rating_to_provider, # complex rating system, related with max
                         'distance_penalty': i['distance'],
                     }
                     interaction_histories.append(interaction_history)
+
+                    # collect data for TRAVOS
+
+
                     # monitor collect history [service quality/is true anomaly, reward]
                     if i['service_quality'] == 1:
                         max_distance = i['distance'] if i['distance'] > max_distance else max_distance

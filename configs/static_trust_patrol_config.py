@@ -4,6 +4,7 @@ map_name = 'museum'
 patrol_algo = 'partition'
 timesteps = 5000
 robots_num = 8
+trust_algo = 'TRAVOS'
 
 static_trust_patrol_config = {
     'env_config':{
@@ -25,7 +26,8 @@ static_trust_patrol_config = {
         'env_penalty': -4000,
         'service_select_strategy': 'trust', # random, good, bad, ignore0_num, trust
         'provider_select_strategy': 'trust', # random, determined, trust
-        'provider_select_randomness': 'determined', # determined, boltzmann
+        'trust_algo': trust_algo,
+        'provider_select_randomness': 'boltzmann', # determined, boltzmann
         'service_strategy_based_on_trust': {'threshold':0}, #{threshold: 0.3}, {function:which function}
         'communication_range': 10000,
     },
@@ -34,7 +36,7 @@ static_trust_patrol_config = {
     },
     'trust_config':{
         'untrust_list': [0],
-        'trust_algo': 'FIRE',
+        'trust_algo': trust_algo,
         'trust_mode': 'IT+WR',
     },
     'total_steps':timesteps,
