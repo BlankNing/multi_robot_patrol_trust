@@ -75,7 +75,7 @@ class StaticMonitor(Monitor):
                 trust_value_to_provider = 'only'
             self.current_request[robot_id] = {'request_robot':request_robot_id, 'service_robot': robot_id, 'time': timestep,
                                           'task':task_id, 'request_position': request_pos, 'is_true_anomaly': is_true_anomaly,
-                                              'trust_value_towards_provider': trust_value_towards_provider,'trust_value_to_provider':trust_value_to_provider}
+                                              'trust_value_towards_provider': trust_value_towards_provider, 'trust_value_to_provider': trust_value_to_provider}
 
 
     def collect_reporter_history(self, reporter_history):
@@ -99,7 +99,7 @@ class StaticMonitor(Monitor):
     def get_in_cycle_flag(self):
         return self.in_cycle_flag
 
-    def get_history_as_provider(self, provider_id, reporter_id):
+    def get_history_as_provider(self, reporter_id, provider_id):
         return self.provider_histories[provider_id][reporter_id]
 
     def get_history_as_reporter(self, reporter_id, provider_id):
@@ -159,6 +159,7 @@ class StaticMonitor(Monitor):
         except: # spot anomaly in the first round, no pos information recorded yet
             return []
 
+        # todo: consider communication range in dynamic environment
         for i, pos in enumerate(current_robot_pos):
             if i != provider_id and i != reporter_id:
                 witness_history[i] = self.reporter_histories[i][provider_id]
@@ -177,6 +178,56 @@ class StaticMonitor(Monitor):
                 witness_history[i] = self.provider_histories[i][reporter_id]
 
         return sum(list(witness_history.values()),[])
+
+
+    def get_history_as_reporter_witness_TRAVOS(self, reporter_id, provider_id, local_history_length = 10, referral_length=2, communication_range = 9999999):
+        witness_history = {}
+        try:
+            current_robot_pos = self.robot_pos[-1]
+        except: # spot anomaly in the first round, no pos information recorded yet
+            return {}
+
+        reporter_pos = current_robot_pos[reporter_id]
+        for i, pos in enumerate(current_robot_pos):
+            distance = ((pos[0]-reporter_pos[0])**2 + (pos[1]-reporter_pos[1])**2) ** 0.5
+            if distance <= communication_range and i != reporter_id and i != provider_id:
+                witness_history[i] = self.reporter_histories[i][provider_id][-local_history_length:]
+
+                # todo: add referral chain
+                # if witness_history[i] == [] and referral_length == 2:
+                #     reporter_pos2 = current_robot_pos[i]
+                #     for i2, pos2 in enumerate(current_robot_pos):
+                #         distance2 = ((pos2[0] - reporter_pos2[0]) ** 2 + (pos2[1] - reporter_pos2[1]) ** 2) ** 0.5
+                #         if distance2 <= communication_range and i2 != reporter_id and i2 != i:
+                #             witness_history[i2] = self.reporter_histories[i2][provider_id][-local_history_length:]
+
+        return witness_history
+
+    def get_history_as_provider_witness_TRAVOS(self, reporter_id, provider_id, local_history_length = 10, referral_length=2, communication_range = 9999999):
+        witness_history = {}
+        try:
+            current_robot_pos = self.robot_pos[-1]
+        except: # spot anomaly in the first round, no pos information recorded yet
+            return {}
+
+        provider_pos = current_robot_pos[provider_id]
+        for i, pos in enumerate(current_robot_pos):
+            distance = ((pos[0]-provider_pos[0])**2 + (pos[1]-provider_pos[1])**2) ** 0.5
+            if distance <= communication_range and i != provider_id and i != reporter_id:
+                witness_history[i] = self.provider_histories[i][reporter_id][-local_history_length:]
+
+                # if witness_history[i] == [] and referral_length == 2:
+                #     reporter_pos2 = current_robot_pos[i]
+                #     for i2, pos2 in enumerate(current_robot_pos):
+                #         distance2 = ((pos2[0] - reporter_pos2[0]) ** 2 + (pos2[1] - reporter_pos2[1]) ** 2) ** 0.5
+                #         if distance2 <= communication_range and i2 != reporter_id and i2 != i:
+                #             witness_history[i2] = self.provider_histories[i2][provider_id][-local_history_length:]
+
+        return witness_history
+
+
+
+
 
     # history plot
 
@@ -367,12 +418,13 @@ class StaticMonitor(Monitor):
             is_true_anomaly.append(h['is_true_anomaly'])
             timestep_trust.append(h['report_time'])
             reward.append(h['provider_reward'] + h['reporter_reward'])
-            if h['trust_towards_reporter'] == 'good' or np.isnan(h['trust_towards_reporter']):
+            trust_value_towards_reporter = h['trust_towards_reporter']['trust_value']
+            if trust_value_towards_reporter == 'good' or np.isnan(trust_value_towards_reporter):
                 trust_towards_reporter.append(1.0)
-            elif h['trust_towards_reporter'] == 'bad':
+            elif trust_value_towards_reporter == 'bad':
                 trust_towards_reporter.append(-1.0)
             else:
-                trust_towards_reporter.append(h['trust_towards_reporter'])
+                trust_towards_reporter.append(trust_value_towards_reporter)
             provider_id.append(h['provider_id'])
 
         # Convert to numpy arrays for easier handling

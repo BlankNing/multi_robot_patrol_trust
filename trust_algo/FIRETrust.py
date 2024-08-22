@@ -112,7 +112,7 @@ class FIRETrust(Trust):
         T = np.sum(Tk * wk)/np.sum(wk)
         rho_T = np.sum(wk)/np.sum(Wk)
 
-        return T, rho_T
+        return {'trust_value': T, 'reliability_of_trust': rho_T}
 
 
 
@@ -121,7 +121,7 @@ class FIRETrust(Trust):
         As a provider, get the individual interaction history with a single reporter
         :return:
         '''
-        histories = self.history_monitor.get_history_as_provider(provider_id, reporter_id)
+        histories = self.history_monitor.get_history_as_provider(reporter_id, provider_id)
         filtered_histories = np.array([history for history in histories if history[2] == task_info][-self.H:])
 
         return self.trust_reliability_calculation(filtered_histories, self.rho_IT)
@@ -178,4 +178,4 @@ class FIRETrust(Trust):
         T = np.sum(Tk * wk)/np.sum(wk)
         rho_T = np.sum(wk)/np.sum(Wk)
 
-        return T, rho_T
+        return {'trust_value': T, 'reliability_of_trust': rho_T}
