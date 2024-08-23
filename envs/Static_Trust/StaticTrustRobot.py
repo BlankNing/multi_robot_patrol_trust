@@ -226,6 +226,8 @@ class StaticRobot(Robot):
                 return self.choose_service_provider_TRAVOS(timestep, task_to_robots)
             elif self.trust_algo =='YUSINGH':
                 return self.choose_service_provider_YUSINGH(timestep, task_to_robots)
+            elif self.trust_algo == 'FUZZY':
+                return self.choose_service_provider_FIRE(timestep, task_to_robots)
 
 
         # select provider randomly across all the available robots
@@ -249,6 +251,9 @@ class StaticRobot(Robot):
                                                                                            self.robots_capable_tasks)
             elif self.trust_algo == 'YUSINGH':
                 trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
+            elif self.trust_algo =='FUZZY':
+                trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
+
             # decide what to do based on the trust value: (1) reach threshold then dead
             # (2) map function between the trust value and the strategy
             trust_value = trust_record['trust_value']

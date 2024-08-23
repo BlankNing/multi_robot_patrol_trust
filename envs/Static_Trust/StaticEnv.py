@@ -107,7 +107,7 @@ class StaticEnv(BasicEnv):
                     elif i['is_true_anomaly'] == 0 and i['service_quality'] == 1:
                         rating_to_provider = 1 - i['distance']/self.max_distance
                     else:
-                        rating_to_provider = 0
+                        rating_to_provider = 0.1
 
                     interaction_history = {
                         'is_true_anomaly': i['is_true_anomaly'],
