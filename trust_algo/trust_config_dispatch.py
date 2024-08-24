@@ -31,5 +31,11 @@ def get_trust_algo_config(config_file):
         }
         return trust_algo_config
 
+    elif trust_algo == 'SUBJECTIVE':
+        trust_algo_config = {
+            'robot_num': robots_num
+        }
+        return trust_algo_config
+
     else:
         return None
