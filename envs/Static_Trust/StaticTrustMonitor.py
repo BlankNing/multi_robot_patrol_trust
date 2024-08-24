@@ -17,6 +17,7 @@ class StaticMonitor(Monitor):
         self.histories = []
         self.informative_impressions = []
 
+
     def generate_history_dict(self):
         '''
         {1:{2:[histories],3:[],4:[]},
@@ -225,8 +226,53 @@ class StaticMonitor(Monitor):
 
         return witness_history
 
+    def get_history_as_reporter_witness_SUBJECTIVE(self, reporter_id, provider_id, last_interaction_timestep, local_history_length = 10, referral_length=2, communication_range = 9999999):
+        witness_history = {}
+        try:
+            current_robot_pos = self.robot_pos[-1]
+        except: # spot anomaly in the first round, no pos information recorded yet
+            return {}
+
+        reporter_pos = current_robot_pos[reporter_id]
+        for i, pos in enumerate(current_robot_pos):
+            distance = ((pos[0]-reporter_pos[0])**2 + (pos[1]-reporter_pos[1])**2) ** 0.5
+            if distance <= communication_range and i != reporter_id and i != provider_id:
+                old_history = [ history for history in self.reporter_histories[i][provider_id] if history[1] < last_interaction_timestep]
+                witness_history[i] = old_history[-local_history_length:]
 
 
+                # todo: add referral chain
+                # if witness_history[i] == [] and referral_length == 2:
+                #     reporter_pos2 = current_robot_pos[i]
+                #     for i2, pos2 in enumerate(current_robot_pos):
+                #         distance2 = ((pos2[0] - reporter_pos2[0]) ** 2 + (pos2[1] - reporter_pos2[1]) ** 2) ** 0.5
+                #         if distance2 <= communication_range and i2 != reporter_id and i2 != i:
+                #             witness_history[i2] = self.reporter_histories[i2][provider_id][-local_history_length:]
+
+        return witness_history
+
+    def get_history_as_provider_witness_SUBJECTIVE(self, reporter_id, provider_id, last_interaction_timestep, local_history_length = 10, referral_length=2, communication_range = 9999999):
+        witness_history = {}
+        try:
+            current_robot_pos = self.robot_pos[-1]
+        except: # spot anomaly in the first round, no pos information recorded yet
+            return {}
+
+        provider_pos = current_robot_pos[provider_id]
+        for i, pos in enumerate(current_robot_pos):
+            distance = ((pos[0]-provider_pos[0])**2 + (pos[1]-provider_pos[1])**2) ** 0.5
+            if distance <= communication_range and i != provider_id and i != reporter_id:
+                old_history = [ history for history in self.provider_histories[i][provider_id] if history[1] < last_interaction_timestep]
+                witness_history[i] = old_history[-local_history_length:]
+
+                # if witness_history[i] == [] and referral_length == 2:
+                #     reporter_pos2 = current_robot_pos[i]
+                #     for i2, pos2 in enumerate(current_robot_pos):
+                #         distance2 = ((pos2[0] - reporter_pos2[0]) ** 2 + (pos2[1] - reporter_pos2[1]) ** 2) ** 0.5
+                #         if distance2 <= communication_range and i2 != reporter_id and i2 != i:
+                #             witness_history[i2] = self.provider_histories[i2][provider_id][-local_history_length:]
+
+        return witness_history
 
 
     # history plot
