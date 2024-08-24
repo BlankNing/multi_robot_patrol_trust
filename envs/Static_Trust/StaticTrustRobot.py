@@ -291,6 +291,7 @@ class StaticRobot(Robot):
                 return self.choose_service_provider_SUBJECTIVE(timestep, task_to_robots)
 
 
+
         # select provider randomly across all the available robots
         elif self.provider_select_strategy == 'random':
             return {task: random.choice(task_to_robots[task]) for task in required_tasks}, 'random'

@@ -6,6 +6,7 @@ timesteps = 5000
 robots_num = 8
 trust_algo = 'SUBJECTIVE'
 
+
 static_trust_patrol_config = {
     'env_config':{
         'map_name': map_name,

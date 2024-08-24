@@ -5,7 +5,6 @@ from trust_algo.YuSinghTrust import YuSinghTrust
 from trust_algo.FuzzyTrust import FuzzyTrust
 from trust_algo.SubjectiveLogicTrust import SubjectiveLogicTrust
 
-
 class TrustFactory():
     @staticmethod
     def create_algo(trust_algo, trust_algo_config):
