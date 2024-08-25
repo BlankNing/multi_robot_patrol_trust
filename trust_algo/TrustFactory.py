@@ -4,6 +4,7 @@ from trust_algo.TRAVOSTrust import TRAVOSTrust
 from trust_algo.YuSinghTrust import YuSinghTrust
 from trust_algo.FuzzyTrust import FuzzyTrust
 from trust_algo.SubjectiveLogicTrust import SubjectiveLogicTrust
+from trust_algo.MLTrust import MLTrust
 
 class TrustFactory():
     @staticmethod
@@ -19,7 +20,7 @@ class TrustFactory():
         elif trust_algo == 'FUZZY':
             return FuzzyTrust(trust_algo_config)
         elif trust_algo == 'ML':
-            pass
+            return MLTrust(trust_algo_config)
         elif trust_algo == 'SUBJECTIVE':
             return SubjectiveLogicTrust(trust_algo_config)
         else:

@@ -2,9 +2,9 @@ from utils.load_map import *
 
 map_name = 'museum'
 patrol_algo = 'partition'
-timesteps = 5000
+timesteps = 3000
 robots_num = 8
-trust_algo = 'SUBJECTIVE'
+trust_algo = 'ML'
 
 
 static_trust_patrol_config = {
@@ -22,7 +22,7 @@ static_trust_patrol_config = {
         'true_positive_abnormal': 1,
         'false_positive_abnormal': 0.7,
         'required_tasks_list': [i for i in range(4)],
-        'robots_capable_tasks':{i : [i % 4] for i in range(8)},
+        'robots_capable_tasks':{i : [i % 4] for i in range(robots_num)},
         'extra_reward': 4000,
         'env_penalty': -4000,
         'service_select_strategy': 'trust', # random, good, bad, ignore0_num, trust
@@ -41,5 +41,5 @@ static_trust_patrol_config = {
         'trust_mode': 'IT+WR',
     },
     'total_steps':timesteps,
-    'seed':600, #1000,3407,600
+    'seed':600, #600,1000,3407,300,5000
 }
