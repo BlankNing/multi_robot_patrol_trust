@@ -41,6 +41,8 @@ class StaticEnv(BasicEnv):
         # Static Robot Init
         self.robots = [StaticRobot(i, self.algo_engine, self.node_pos_matrix, self.init_pos[i], self.untrust_list,
                                     self.monitor, self.trust_engine, self.robot_config) for i in range(self.robots_num)]
+        # collect init position
+        self.monitor.collect_robot_pos(config_file['robot_config']['init_pos'])
         self.cycle_history = deque(maxlen=3)
         # set initial anomaly position and preceived by the monitor
         self.update_anomaly_random_report()
@@ -114,6 +116,7 @@ class StaticEnv(BasicEnv):
                         'reporter_id': i['request_robot'],
                         'provider_id': i['service_robot'],
                         'task_id': i['task'],
+                        'is_same_type': i['is_same_type'],
                         'report_time': i['time'],
                         'provide_time': i['service_time'],
                         'report_position': i['request_position'],

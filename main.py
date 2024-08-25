@@ -49,6 +49,16 @@ for t in range(config['total_steps']):
 # env.monitor.create_patrol_gif(config)
 
 print(env.monitor.histories)
+
+import pandas as pd
+
+data = pd.DataFrame(env.monitor.histories)
+data.to_csv(os.path.join(result_dir, 'histories.csv'))
+
+
+
+
+
 # env.monitor.reward_with_untrustworthy_plot(0)
 # env.monitor.trust_with_untrustworthy_plot(0)
 env.monitor.combined_reward_trust_with_all_robot_plot(0, config['robot_config']['service_select_strategy'])

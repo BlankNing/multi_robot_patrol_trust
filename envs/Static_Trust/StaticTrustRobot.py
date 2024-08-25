@@ -289,6 +289,8 @@ class StaticRobot(Robot):
                 return self.choose_service_provider_FIRE(timestep, task_to_robots)
             elif self.trust_algo =='SUBJECTIVE':
                 return self.choose_service_provider_SUBJECTIVE(timestep, task_to_robots)
+            elif self.trust_algo =='ML':
+                return self.choose_service_provider_FIRE(timestep, task_to_robots)
 
 
 
@@ -316,6 +318,8 @@ class StaticRobot(Robot):
             elif self.trust_algo =='FUZZY':
                 trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
             elif self.trust_algo =='SUBJECTIVE':
+                trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
+            elif self.trust_algo == 'ML':
                 trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
 
             # decide what to do based on the trust value: (1) reach threshold then dead
@@ -424,6 +428,7 @@ class StaticRobot(Robot):
             impression['trust_value_towards_reporter'] = trust_record
             impression['service_position'] = self.current_pos
             impression['service_time'] = timestep
+            impression['is_same_type'] = 1 if self.robots_capable_tasks[request_robot_id] == self.robots_capable_tasks[self.id] else 0
             is_true_anomaly = impression['is_true_anomaly']
 
             if service_quality == 1:

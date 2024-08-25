@@ -17,6 +17,10 @@ class StaticMonitor(Monitor):
         self.histories = []
         self.informative_impressions = []
 
+    def calculate_distance(self, robot_id1, robot_id2):
+        robot_1_pos = self.robot_pos[-1][robot_id1]
+        robot_2_pos = self.robot_pos[-1][robot_id2]
+        return ((robot_1_pos[0]-robot_2_pos[0])**2 + (robot_1_pos[1]-robot_2_pos[1])**2) ** 0.5
 
     def generate_history_dict(self):
         '''
@@ -48,8 +52,8 @@ class StaticMonitor(Monitor):
         self.histories.extend(histories)
         for h in histories:
             # history: [timestep, rating, task]
-            self.collect_reporter_history([h['reporter_id'], h['provider_id'],[h['provide_time'], h['rating_to_provider'], h['task_id']]])
-            self.collect_provider_history([h['reporter_id'], h['provider_id'],[h['provide_time'], h['rating_to_reporter'], h['task_id']]])
+            self.collect_reporter_history([h['reporter_id'], h['provider_id'],[h['provide_time'], h['rating_to_provider'], h['task_id'], h['is_same_type']]])
+            self.collect_provider_history([h['reporter_id'], h['provider_id'],[h['provide_time'], h['rating_to_reporter'], h['task_id'], h['is_same_type']]])
 
     def check_request(self, service_robot_id, time_step):
         try:
@@ -77,7 +81,6 @@ class StaticMonitor(Monitor):
             self.current_request[robot_id] = {'request_robot':request_robot_id, 'service_robot': robot_id, 'time': timestep,
                                           'task':task_id, 'request_position': request_pos, 'is_true_anomaly': is_true_anomaly,
                                               'trust_value_towards_provider': trust_value_towards_provider, 'trust_value_to_provider': trust_value_to_provider}
-
 
     def collect_reporter_history(self, reporter_history):
         reporter_id = reporter_history[0]

@@ -37,5 +37,13 @@ def get_trust_algo_config(config_file):
         }
         return trust_algo_config
 
+    elif trust_algo == 'ML':
+        trust_algo_config = {
+            'trust_model_path_provider': './trust_algo/ML_based_training/models/provider/svm_model_rbf.pkl',
+            'trust_model_path_reporter': './trust_algo/ML_based_training/models/reporter/svm_model_rbf.pkl',
+            'scaler_path_provider': './trust_algo/ML_based_training/models/provider/scaler.pkl',
+            'scaler_path_reporter': './trust_algo/ML_based_training/models/reporter/scaler.pkl',
+        }
+        return trust_algo_config
     else:
         return None
