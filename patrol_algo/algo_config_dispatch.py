@@ -17,4 +17,12 @@ def get_algo_config(config_file):
         return partition_algo_config
 
     elif patrol_algo == 'SEBS':
-        pass
+        partition_algo_config = {
+            'robots_num': robots_num,
+            'nodes_num': len(node_pos_matrix),
+            'pgm_map_matrix': pgm_map_matrix,
+            'node_pos_matrix': node_pos_matrix,
+            'map_adj_matrix': map_adj_matrix,
+            'neighbour_matrix': config_file['env_config']['neighbour_matrix'],
+        }
+        return partition_algo_config

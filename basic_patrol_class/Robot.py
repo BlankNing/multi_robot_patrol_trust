@@ -11,9 +11,9 @@ class Robot():
         self.id = id
         self.algo_engine = algo_engine
         self.path_list = []
-        self.last_node = -1
         self.current_pos = init_pos
         self.node_pos_matrix = node_pos_matrix
+        self.last_node = self.check_node()
         self.state = 'Patrolling'
 
     def check_node(self):

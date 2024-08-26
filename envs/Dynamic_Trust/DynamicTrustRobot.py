@@ -4,7 +4,7 @@ import numpy as np
 import random
 
 
-class StaticRobot(Robot):
+class DynamicRobot(Robot):
     def __init__(self, id, algo_engine, node_pos_matrix, init_pos, untrust_list, uncooperative_list, monitor, trust_engine, config_file):
         super().__init__(id, algo_engine, node_pos_matrix, init_pos)
 
@@ -20,13 +20,21 @@ class StaticRobot(Robot):
         self.communication_range = config_file['communication_range']
         self.provider_select_randomness = config_file['provider_select_randomness']
         self.trust_algo = config_file['trust_algo']
+        self.patrol_algo = config_file['patrol_algo']
+        self.robot_num = config_file['robots_num']
         self.monitor = monitor
         self.trust_engine = trust_engine
         self.service_time = 0
+        self.last_node = int(self.check_node())
+        if self.patrol_algo == 'SEBS':
+            self.goal_node = self.algo_engine.determine_goal(np.zeros(len(self.monitor.get_latest_idleness())),
+                                                             np.full(self.robot_num, config_file['dimension'] + 1),
+                                                             self.last_node)
         self.task_to_robot = self.generate_task_to_robot()
         # load logging system
         self.logger = logging.getLogger(__name__)
 
+        # set up untrustworthy robot
         if self.id not in untrust_list:
             self.true_positive = config_file['true_positive_trustworthy']
             self.false_positve = config_file['false_positive_trustworthy']
@@ -365,6 +373,8 @@ class StaticRobot(Robot):
 
     def step(self, verbose=False, **kwargs):
         timestep = kwargs.get('timestep')
+        intention_table = kwargs.get('intention_table')
+        idleness_log = kwargs.get('idleness_log')
         impression = {}
 
         # If is in service state:
@@ -377,8 +387,13 @@ class StaticRobot(Robot):
             self.true_anomaly_pos = self.monitor.get_anomaly_pos()
             # check which node robot is on
             self.last_node = int(self.check_node())
-            # calculate the next place to go
-            self.path_list = self.algo_engine.calculate_next_path(self.id, self.last_node)
+
+            if self.patrol_algo == 'partition':
+                # calculate the next place to go
+                self.path_list = self.algo_engine.calculate_next_path(self.id, self.last_node)
+            elif self.patrol_algo == 'SEBS':
+                # get the latest idleness log
+                self.path_list, self.goal_node = self.algo_engine.calculate_next_path(self.id, idleness_log, intention_table, self.last_node)
             # check if it's still in anomaly cycle
             anomaly_detect_cycle_flag = self.monitor.get_in_cycle_flag()
 
@@ -433,7 +448,7 @@ class StaticRobot(Robot):
                 service_quality = 0
                 trust_record = 'uncooperative'
             else:
-                # choose_service_quality based on trust
+                # if not uncooperative, choose_service_quality based on trust
                 service_quality, trust_record = self.choose_service_quality(request_robot_id, current_request['task'], timestep)
             impression['service_quality'] = service_quality
             impression['trust_value_towards_reporter'] = trust_record

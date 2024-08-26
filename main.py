@@ -11,8 +11,15 @@ notice closest robot, todo
 choose to cooperate with probability 0.7 todo
 '''
 
-from envs.Static_Trust.StaticEnv import StaticEnv as Env
-from configs.static_trust_patrol_config import static_trust_patrol_config as config
+experiment = 'static'
+
+if experiment == 'static':
+    from envs.Static_Trust.StaticEnv import StaticEnv as Env
+    from configs.static_trust_patrol_config import static_trust_patrol_config as config
+else:
+    from envs.Dynamic_Trust.DynamicEnv import DynamicEnv as Env
+    from configs.dynamic_trust_patrol_config import dynamic_trust_patrol_config as config
+
 import logging
 from datetime import datetime
 import os
@@ -20,19 +27,22 @@ import random
 
 print(config)
 
-# set the logging system
+# set the logging system, create necessary file folders
+result_dir_path = config['result_dir_path']
 current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-result_dir = os.path.join('results',current_time)
+result_dir = os.path.join(result_dir_path, current_time)
 os.makedirs(result_dir, exist_ok=True)
 log_file_path = os.path.join(result_dir, 'experiment.log')
-
+# init logging system
 logging.basicConfig(filename = log_file_path, level=logging.INFO,
                     format = '%(message)s')
 
+# guarantee reproduciblility
 try:
     random.seed(config['seed'])
 except:
     pass
+
 # prepare environment, robot, algo, trust model
 env = Env(config)
 
@@ -47,18 +57,15 @@ for t in range(config['total_steps']):
 # env.monitor.plot_trust_value(0)
 # env.monitor.create_patrol_screenshot(config, 200)
 # env.monitor.create_patrol_gif(config)
+# env.monitor.reward_with_untrustworthy_plot(0)
+# env.monitor.trust_with_untrustworthy_plot(0)
 
 print(env.monitor.histories)
 
+# save interaction history as csv
 import pandas as pd
-
 data = pd.DataFrame(env.monitor.histories)
 data.to_csv(os.path.join(result_dir, 'histories.csv'))
 
-
-
-
-
-# env.monitor.reward_with_untrustworthy_plot(0)
-# env.monitor.trust_with_untrustworthy_plot(0)
-env.monitor.combined_reward_trust_with_all_robot_plot(0, config['robot_config']['service_select_strategy'])
+# env.monitor.combined_reward_trust_with_all_robot_plot(0, config['robot_config']['service_select_strategy'])
+env.monitor.create_patrol_gif(config, 'SEBS_museum.gif')

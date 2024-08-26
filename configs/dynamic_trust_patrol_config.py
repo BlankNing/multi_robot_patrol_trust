@@ -1,18 +1,31 @@
 from utils.load_map import *
+import itertools
 
 map_name = 'museum'
-patrol_algo = 'partition'
+patrol_algo = 'SEBS'
 timesteps = 3000
 robots_num = 8
 trust_algo = 'ML'
 
+def gen_neighbours(adjacency):
+    """
+    Returns a matrix representing the neighbors of each node in the PatrolMap.
+    @return: A matrix where each row represents a node in the PatrolMap and the elements of the row represents the neighbors of that node.
+    """
+    num_nodes = adjacency.shape[0]
+    neighbours_matrix = [[] for _ in range(num_nodes)]
+    for i, j in itertools.product(range(num_nodes), range(num_nodes)):
+        if adjacency[i][j] >= 1:
+            neighbours_matrix[i].append(j)
+    return neighbours_matrix
 
-static_trust_patrol_config = {
+dynamic_trust_patrol_config = {
     'env_config':{
         'map_name': map_name,
         'node_pos_matrix':get_node_pos_matrix(map_name),
         'map_adj_matrix':get_map_adj_matrix(map_name),
         'pgm_map_matrix':get_pgm_map_matrix(map_name),
+        'neighbour_matrix': gen_neighbours(get_map_adj_matrix(map_name))
     },
     'robot_config':{
         'robots_num': robots_num,
@@ -29,6 +42,7 @@ static_trust_patrol_config = {
         'service_select_strategy': 'trust', # random, good, bad, ignore0_num, trust
         'provider_select_strategy': 'trust', # random, determined, trust
         'trust_algo': trust_algo,
+        'patrol_algo': patrol_algo,
         'provider_select_randomness': 'boltzmann', # determined, boltzmann
         'service_strategy_based_on_trust': {'threshold':0}, #{threshold: 0.3}, {function:which function}
         'communication_range': 10000,
@@ -38,11 +52,11 @@ static_trust_patrol_config = {
     },
     'trust_config':{
         'untrust_list': [0],
-        'uncooperative_list': [0],
+        'uncooperative_list': [4],
         'trust_algo': trust_algo,
         'trust_mode': 'IT+WR',
     },
     'total_steps':timesteps,
-    'result_dir_path': './results/static/',
+    'result_dir_path': './results/dynamic/',
     'seed':600, #600,1000,3407,300,5000
 }

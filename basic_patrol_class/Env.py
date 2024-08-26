@@ -56,6 +56,7 @@ class BasicEnv:
         self.node_pos_matrix = config_file['env_config']['node_pos_matrix']
         self.map_adj_matrix = config_file['env_config']['map_adj_matrix']
         self.pgm_map_matrix = config_file['env_config']['pgm_map_matrix']
+        self.dimension = len(self.map_adj_matrix)
 
         self.patrol_algo = config_file['algo_config']['patrol_algo_name']
         self.patrol_algo_config = get_algo_config(config_file)
@@ -74,6 +75,10 @@ class BasicEnv:
         # print("Basic Robots have been set up")
         self.monitor = Monitor()
         # print("Basic Monitor is ready")
+        # collect init position
+        self.monitor.collect_robot_pos(self.init_pos)
+        # collect init idleness
+        self.monitor.collect_node_idleness([0 for _ in range(self.nodes_num)])
 
         # logging
         self.logger = logging.getLogger(__name__)

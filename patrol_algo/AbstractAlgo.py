@@ -1,8 +1,9 @@
 import abc
+from typing import Any
 
 class Algo(abc.ABC):
     @abc.abstractmethod
-    def calculate_next_path(self, robot_id, current_node):
+    def calculate_next_path(self, *args: Any, **kwargs: Any):
         '''
         given robot number and current node position, determine which node to go next. return planned path
 
