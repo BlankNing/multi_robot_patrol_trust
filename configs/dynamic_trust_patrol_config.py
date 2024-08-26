@@ -51,6 +51,8 @@ dynamic_trust_patrol_config = {
         'patrol_algo_name':patrol_algo,
     },
     'trust_config':{
+        'trust_dynamic': {2000: {0:1, 4:0}, 5000: {0:0, 4:1}}, # {timestep_1: {robot_id: trustworthy 1 /untrustworthy 0 },}
+        'cooperativeness_dynamic': {4000: {4:1}}, # {timestep_1: {robot_id: cooperative 1 /uncooperative 0 },}
         'untrust_list': [0],
         'uncooperative_list': [4],
         'trust_algo': trust_algo,

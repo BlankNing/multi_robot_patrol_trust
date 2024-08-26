@@ -68,4 +68,4 @@ data = pd.DataFrame(env.monitor.histories)
 data.to_csv(os.path.join(result_dir, 'histories.csv'))
 
 # env.monitor.combined_reward_trust_with_all_robot_plot(0, config['robot_config']['service_select_strategy'])
-env.monitor.create_patrol_gif(config, 'SEBS_museum.gif')
+# env.monitor.create_patrol_gif(config, 'SEBS_museum.gif')

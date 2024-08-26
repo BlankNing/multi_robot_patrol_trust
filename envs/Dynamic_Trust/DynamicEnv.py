@@ -26,6 +26,9 @@ class DynamicEnv(BasicEnv):
         # init untrustworthy robots
         self.untrust_list = config_file['trust_config']['untrust_list']
         self.uncooperative_list = config_file['trust_config']['uncooperative_list']
+        # init trust/cooperativeness dynamic
+        self.trust_dynamic = config_file['trust_config']['trust_dynamic']
+        self.cooperativeness_dynamic = config_file['trust_config']['cooperativeness_dynamic']
         # init trust algorithm
         self.trust_algo = config_file['trust_config']['trust_algo']
         self.trust_algo_config = get_trust_algo_config(config_file)
@@ -56,7 +59,10 @@ class DynamicEnv(BasicEnv):
         # collect init idleness
         self.monitor.collect_node_idleness([0 for _ in range(self.nodes_num)])
         # Static Robot Init
-        self.robots = [DynamicRobot(i, self.algo_engine, self.node_pos_matrix, self.init_pos[i], self.untrust_list, self.uncooperative_list, self.monitor, self.trust_engine, self.robot_config) for i in range(self.robots_num)]
+        self.robots = [DynamicRobot(i, self.algo_engine, self.node_pos_matrix, self.init_pos[i], self.untrust_list,
+                                    self.uncooperative_list, self.trust_dynamic, self.cooperativeness_dynamic,
+                                    self.monitor, self.trust_engine,
+                                    self.robot_config) for i in range(self.robots_num)]
 
         self.cycle_history = deque(maxlen=3)
 

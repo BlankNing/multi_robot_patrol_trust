@@ -5,7 +5,7 @@ import random
 
 
 class DynamicRobot(Robot):
-    def __init__(self, id, algo_engine, node_pos_matrix, init_pos, untrust_list, uncooperative_list, monitor, trust_engine, config_file):
+    def __init__(self, id, algo_engine, node_pos_matrix, init_pos, untrust_list, uncooperative_list, trust_dynamic, cooperativeness_dynamic, monitor, trust_engine, config_file):
         super().__init__(id, algo_engine, node_pos_matrix, init_pos)
 
         # {robot id: [capable task list]}
@@ -26,6 +26,8 @@ class DynamicRobot(Robot):
         self.trust_engine = trust_engine
         self.service_time = 0
         self.last_node = int(self.check_node())
+        self.trust_dynamic_timestep = trust_dynamic
+        self.cooperativeness_dynamic_timestep = cooperativeness_dynamic
         if self.patrol_algo == 'SEBS':
             self.goal_node = self.algo_engine.determine_goal(np.zeros(len(self.monitor.get_latest_idleness())),
                                                              np.full(self.robot_num, config_file['dimension'] + 1),
@@ -35,6 +37,9 @@ class DynamicRobot(Robot):
         self.logger = logging.getLogger(__name__)
 
         # set up untrustworthy robot
+        self.trustworthy_robot_setting = (config_file['true_positive_trustworthy'], config_file['false_positive_trustworthy'])
+        self.untrustworthy_robot_setting = (config_file['true_positive_abnormal'], config_file['false_positive_abnormal'])
+
         if self.id not in untrust_list:
             self.true_positive = config_file['true_positive_trustworthy']
             self.false_positve = config_file['false_positive_trustworthy']
@@ -43,6 +48,8 @@ class DynamicRobot(Robot):
             self.false_positve = config_file['false_positive_abnormal']
 
         # set up uncooperative robot
+        self.uncooperative_robot_setting = config_file['uncooperativeness']
+
         if self.id not in uncooperative_list:
             self.uncooperativeness = config_file['uncooperativeness']
         else:
@@ -376,6 +383,22 @@ class DynamicRobot(Robot):
         intention_table = kwargs.get('intention_table')
         idleness_log = kwargs.get('idleness_log')
         impression = {}
+
+        # check trust dynamic
+        if timestep in self.trust_dynamic_timestep.keys() and self.id in self.trust_dynamic_timestep[timestep].keys():
+            if self.trust_dynamic_timestep[timestep][self.id]: # become trustworthy
+                self.true_positive = self.trustworthy_robot_setting[0]
+                self.false_positve = self.trustworthy_robot_setting[1]
+            else: # become untrustworthy
+                self.true_positive = self.untrustworthy_robot_setting[0]
+                self.false_positve = self.untrustworthy_robot_setting[1]
+
+        # check cooperativeness dynamic
+        if timestep in self.cooperativeness_dynamic_timestep.keys() and self.id in self.cooperativeness_dynamic_timestep[timestep].keys():
+            if self.cooperativeness_dynamic_timestep[timestep][self.id]: # become cooperative
+                self.uncooperativeness = 0
+            else: # become uncooperative
+                self.uncooperativeness = self.uncooperative_robot_setting
 
         # If is in service state:
         if self.service_time != 0:
