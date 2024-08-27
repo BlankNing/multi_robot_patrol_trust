@@ -83,15 +83,17 @@ class DynamicEnv(BasicEnv):
         interaction_flag = False
         robot_pos_records = []
         env_interaction_impressions= []
+        robot_current_states = []
         for robot in self.robots:
             # todo: intention_table
             for agent_number, intention_agent in enumerate(self.robots):
-                self.intention_table[agent_number] = intention_agent.goal_node
+                self.intention_table[agent_number] = intention_agent.goal_node if intention_agent.state == 'Patrolling' else -1
             idleness_log = self.monitor.get_latest_idleness()
-            robot_pos_record, env_interaction_impression = robot.step(verbose=verbose, timestep=self.timestep,
+            robot_pos_record, env_interaction_impression, robot_current_state = robot.step(verbose=verbose, timestep=self.timestep,
                                                                       intention_table=self.intention_table,
                                                                       idleness_log=idleness_log)
             robot_pos_records.append(robot_pos_record)
+            robot_current_states.append(robot_current_state)
             env_interaction_impressions.append(env_interaction_impression)
             interaction_flag = not all(element == {} for element in env_interaction_impressions)
             # check if we are in an anomaly detection cycle
@@ -172,6 +174,6 @@ class DynamicEnv(BasicEnv):
         # node record
         node_idleness_records = []
         for node in self.nodes:
-            node_idleness_record = node.step(robot_pos_records)
+            node_idleness_record = node.step(robot_pos_records, robot_current_states)
             node_idleness_records.append(node_idleness_record)
         self.monitor.collect_node_idleness(node_idleness_records)

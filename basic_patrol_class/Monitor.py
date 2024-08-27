@@ -18,7 +18,7 @@ class Monitor():
     def collect_node_idleness(self, nodes_idleness_record):
         self.node_idleness.append(nodes_idleness_record)
 
-    def plot_idleness(self,node_num):
+    def plot_idleness(self, node_num):
         data_array = np.array(self.node_idleness)
         column_data = data_array[:, node_num]
         plt.plot(range(len(column_data)), column_data)
@@ -27,6 +27,41 @@ class Monitor():
         plt.ylabel("Idleness")
         plt.grid(True)
         plt.show()
+
+    def plot_all_idleness(self):
+        data_array = np.array(self.node_idleness)  # Convert node idleness data to a numpy array
+        num_nodes = data_array.shape[1]  # Get the number of nodes
+
+        plt.figure(figsize=(10, 6))  # Set the figure size
+
+        for node_num in range(num_nodes):  # Iterate over each node
+            column_data = data_array[:, node_num]  # Get the idleness data for each node
+            plt.plot(range(len(column_data)), column_data,
+                     label=f"Node {node_num}")  # Plot the idleness curve for the node
+
+        plt.title("Idleness of All Nodes Over Time")  # Set the plot title
+        plt.xlabel("Time Step")  # Set the x-axis label
+        plt.ylabel("Idleness")  # Set the y-axis label
+        plt.legend(loc="upper right")  # Add a legend, placed in the upper right corner
+        plt.grid(True)  # Show grid lines
+        plt.show()  # Display the plot
+
+    def plot_idleness_in_range(self, node_range):
+        data_array = np.array(self.node_idleness)  # Convert node idleness data to a numpy array
+
+        plt.figure(figsize=(10, 6))  # Set the figure size
+
+        for node_num in node_range:  # Iterate over the specified range of nodes
+            column_data = data_array[:, node_num]  # Get the idleness data for each node
+            plt.plot(range(len(column_data)), column_data,
+                     label=f"Node {node_num}")  # Plot the idleness curve for the node
+
+        plt.title("Idleness of Nodes in Specified Range Over Time")  # Set the plot title
+        plt.xlabel("Time Step")  # Set the x-axis label
+        plt.ylabel("Idleness")  # Set the y-axis label
+        plt.legend(loc="upper right")  # Add a legend, placed in the upper right corner
+        plt.grid(True)  # Show grid lines
+        plt.show()  # Display the plot
 
     def create_patrol_screenshot(self, config_file, time_step, save_path=None, save_plot=False):
         node_pos_matrix = config_file['env_config']['node_pos_matrix']

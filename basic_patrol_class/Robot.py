@@ -31,4 +31,4 @@ class Robot():
         if verbose == True:
             print(f"Robot_{self.id} {self.state} at {self.current_pos} {self.last_node}")
 
-        return self.current_pos
+        return self.current_pos, self.state

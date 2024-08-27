@@ -16,6 +16,7 @@ class DynamicMonitor(Monitor):
         self.provider_histories = self.generate_history_dict()
         self.histories = []
         self.informative_impressions = []
+        self.recharging_robots = []
 
     def calculate_distance(self, robot_id1, robot_id2):
         robot_1_pos = self.robot_pos[-1][robot_id1]
@@ -65,6 +66,13 @@ class DynamicMonitor(Monitor):
         except:
             return None
 
+    def check_waiting_time_reporter(self, reporter_id, timestep):
+        try:
+            distance = max([history['distance_penalty'] for history in self.histories if history['reporter_id'] == reporter_id and history['report_time'] == timestep - 2])
+        except:
+            distance = 0
+        return distance/2
+
     def inform_request(self, request_robot_id, name_list, request_pos, is_true_anomaly, timestep, trust_value_towards_provider):
         '''
         :param request_robot_id:
@@ -84,6 +92,29 @@ class DynamicMonitor(Monitor):
             self.current_request[robot_id] = {'request_robot':request_robot_id, 'service_robot': robot_id, 'time': timestep,
                                           'task':task_id, 'request_position': request_pos, 'is_true_anomaly': is_true_anomaly,
                                               'trust_value_towards_provider': trust_value_towards_provider, 'trust_value_to_provider': trust_value_to_provider}
+    def get_recharging_robots(self):
+        return self.recharging_robots
+
+    def set_recharging_robot(self, robot_id):
+        self.recharging_robots.append(robot_id)
+
+    def check_if_rechargable(self, task_to_robot, robot_id):
+        is_rechargable = True
+        # only keep those tasks related with the robot himself:
+        task_to_robots = {task: robots for task, robots in task_to_robot.items() if robot_id in robots}
+        for task, robots in task_to_robots.items():
+            for robot in self.recharging_robots:
+                try:
+                    robots.remove(robot)
+                except:
+                    pass
+            if len(robots) == 1:
+                is_rechargable = False
+                return is_rechargable
+
+        return is_rechargable
+    def release_recharging_robot(self, robot_id):
+        self.recharging_robots.remove(robot_id)
 
     def collect_reporter_history(self, reporter_history):
         reporter_id = reporter_history[0]

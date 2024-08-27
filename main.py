@@ -11,7 +11,7 @@ notice closest robot, todo
 choose to cooperate with probability 0.7 todo
 '''
 
-experiment = 'static'
+experiment = 'dynamic'
 
 if experiment == 'static':
     from envs.Static_Trust.StaticEnv import StaticEnv as Env
@@ -67,5 +67,7 @@ import pandas as pd
 data = pd.DataFrame(env.monitor.histories)
 data.to_csv(os.path.join(result_dir, 'histories.csv'))
 
+env.monitor.plot_idleness_in_range([i for i in range(6)])
+
 # env.monitor.combined_reward_trust_with_all_robot_plot(0, config['robot_config']['service_select_strategy'])
-# env.monitor.create_patrol_gif(config, 'SEBS_museum.gif')
+# env.monitor.create_patrol_gif(config, 'SEBS_museum_recharge_service.gif')

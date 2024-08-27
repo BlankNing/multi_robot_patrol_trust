@@ -86,14 +86,16 @@ class BasicEnv:
     def step(self,verbose=False):
         # robot move
         robot_pos_records = []
+        robot_current_states = []
         for robot in self.robots:
-            robot_pos_record = robot.step(verbose=verbose)
+            robot_pos_record, robot_current_state = robot.step(verbose=verbose)
             robot_pos_records.append(robot_pos_record)
+            robot_current_states.append(robot_current_state)
         self.monitor.collect_robot_pos(robot_pos_records)
 
         # node record
         node_idleness_records = []
         for node in self.nodes:
-            node_idleness_record = node.step(robot_pos_records)
+            node_idleness_record = node.step(robot_pos_records, robot_current_states)
             node_idleness_records.append(node_idleness_record)
         self.monitor.collect_node_idleness(node_idleness_records)
