@@ -1,6 +1,7 @@
 import logging
 
 from basic_patrol_class.Env import BasicEnv
+from patrol_algo.AlgoFactory import AlgoFactory
 from .DynamicTrustRobot import DynamicRobot
 from .DynamicTrustMonitor import DynamicMonitor
 from trust_algo.trust_config_dispatch import get_trust_algo_config
@@ -85,9 +86,12 @@ class DynamicEnv(BasicEnv):
         env_interaction_impressions= []
         robot_current_states = []
         for robot in self.robots:
-            # todo: intention_table
+            # todo: intention_table calculation
             for agent_number, intention_agent in enumerate(self.robots):
-                self.intention_table[agent_number] = intention_agent.goal_node if intention_agent.state == 'Patrolling' else -1
+                # only consider patrolling robots, not recharding or service robot.
+                # only consider patrol robots, not guide robots
+                self.intention_table[agent_number] = intention_agent.goal_node if (intention_agent.state == 'Patrolling'
+                                                                                   and not intention_agent.is_service_robot) else -1
             idleness_log = self.monitor.get_latest_idleness()
             robot_pos_record, env_interaction_impression, robot_current_state = robot.step(verbose=verbose, timestep=self.timestep,
                                                                       intention_table=self.intention_table,

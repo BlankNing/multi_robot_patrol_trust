@@ -70,4 +70,4 @@ data.to_csv(os.path.join(result_dir, 'histories.csv'))
 env.monitor.plot_idleness_in_range([i for i in range(6)])
 
 # env.monitor.combined_reward_trust_with_all_robot_plot(0, config['robot_config']['service_select_strategy'])
-# env.monitor.create_patrol_gif(config, 'SEBS_museum_recharge_service.gif')
+env.monitor.create_patrol_gif(config, 'SEBS_museum_recharge_service.gif')

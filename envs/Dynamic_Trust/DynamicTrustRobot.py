@@ -3,6 +3,9 @@ import logging
 import numpy as np
 import random
 
+from patrol_algo.AlgoFactory import AlgoFactory
+from patrol_algo.algo_config_dispatch import get_algo_config
+
 
 class DynamicRobot(Robot):
     def __init__(self, id, algo_engine, node_pos_matrix, init_pos, untrust_list, uncooperative_list, trust_dynamic, cooperativeness_dynamic, monitor, trust_engine, config_file):
@@ -22,6 +25,13 @@ class DynamicRobot(Robot):
         self.trust_algo = config_file['trust_algo']
         self.patrol_algo = config_file['patrol_algo']
         self.robot_num = config_file['robots_num']
+        self.service_robot_id = config_file['service_robot_id']
+        self.is_service_robot = self.service_robot_id == self.id
+        if self.is_service_robot:
+            self.guide_patrol_algo = config_file['patrol_algo_name']
+            self.patrol_algo_config = get_algo_config(config_file)
+            self.algo_engine = AlgoFactory().create_algo(self.guide_patrol_algo, self.patrol_algo_config)
+
         self.monitor = monitor
         self.trust_engine = trust_engine
         self.service_time = 0
@@ -431,7 +441,8 @@ class DynamicRobot(Robot):
 
         # parameters all updated, start patrol/request/provide
         # If reach an interest point, and it's not in a detection cycle, then could find anomaly
-        if self.path_list == []:
+        # and it's not a service robot, service robot only provide help
+        if self.path_list == [] and not self.is_service_robot:
             # check current anomaly point position
             self.true_anomaly_pos = self.monitor.get_anomaly_pos()
             # check which node robot is on

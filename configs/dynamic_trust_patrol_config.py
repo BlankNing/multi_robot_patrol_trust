@@ -43,12 +43,17 @@ dynamic_trust_patrol_config = {
         'provider_select_strategy': 'trust', # random, determined, trust
         'trust_algo': trust_algo,
         'patrol_algo': patrol_algo,
+        'patrol_algo_name': 'Random',
         'provider_select_randomness': 'boltzmann', # determined, boltzmann
         'service_strategy_based_on_trust': {'threshold':0}, #{threshold: 0.3}, {function:which function}
         'communication_range': 10000,
+        'service_robot_id': 8,
     },
     'algo_config':{
         'patrol_algo_name':patrol_algo,
+    },
+    'guide_algo_config': {
+        'patrol_algo_name': 'Random'
     },
     'trust_config':{
         'trust_dynamic': {2000: {0:1, 4:0}, 5000: {0:0, 4:1}}, # {timestep_1: {robot_id: trustworthy 1 /untrustworthy 0 },}
