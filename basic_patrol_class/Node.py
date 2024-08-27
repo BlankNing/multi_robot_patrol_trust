@@ -4,11 +4,11 @@ class Node():
         self.pos_info = tuple(pos_info)
         self.idleness = 0
 
-    def step(self, robot_current_pos):
-        if self.pos_info not in robot_current_pos:
-            self.idleness += 1
-        else:
+    def step(self, robot_current_pos, robot_current_states):
+        if self.pos_info in robot_current_pos and robot_current_states[robot_current_pos.index(self.pos_info)] == 'Patrolling':
             self.reset()
+        else:
+            self.idleness += 1
         return self.idleness
 
     def reset(self):

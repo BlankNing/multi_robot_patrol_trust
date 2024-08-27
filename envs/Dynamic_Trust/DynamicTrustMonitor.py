@@ -1,7 +1,7 @@
 from basic_patrol_class.Monitor import Monitor
 import matplotlib.pyplot as plt
 import numpy as np
-class StaticMonitor(Monitor):
+class DynamicMonitor(Monitor):
     def __init__(self, robot_num):
         super().__init__()
         self.anomaly = -1
@@ -16,6 +16,10 @@ class StaticMonitor(Monitor):
         self.provider_histories = self.generate_history_dict()
         self.histories = []
         self.informative_impressions = []
+        self.recharging_robots = []
+        self.robot_communication_range = -1
+    def update_robot_communication_range(self, range):
+        self.robot_communication_range = range
 
     def calculate_distance(self, robot_id1, robot_id2):
         robot_1_pos = self.robot_pos[-1][robot_id1]
@@ -35,6 +39,9 @@ class StaticMonitor(Monitor):
         for i in range(0, self.robot_num):
             robot_dict[i] = {j: [] for j in range(0, self.robot_num) if j != i}
         return robot_dict
+
+    def get_latest_idleness(self):
+        return self.node_idleness[-1]
 
     def update_anomaly_pos(self,new_pos):
         self.anomaly = new_pos
@@ -62,7 +69,14 @@ class StaticMonitor(Monitor):
         except:
             return None
 
-    def inform_request(self, request_robot_id, name_list, request_pos, is_true_anomaly, timestep, trust_value_towards_provider):
+    def check_waiting_time_reporter(self, reporter_id, timestep):
+        try:
+            distance = max([history['distance_penalty'] for history in self.histories if history['reporter_id'] == reporter_id and history['report_time'] == timestep - 2])
+        except:
+            distance = 0
+        return distance/2
+
+    def inform_request(self, request_robot_id, name_list, request_pos, is_true_anomaly, timestep, trust_value_towards_provider, reporter_trustworthiness):
         '''
         :param request_robot_id:
         :param name_list: {1:0, 2:2, 3:1}
@@ -80,7 +94,32 @@ class StaticMonitor(Monitor):
                 trust_value_to_provider = 'only'
             self.current_request[robot_id] = {'request_robot':request_robot_id, 'service_robot': robot_id, 'time': timestep,
                                           'task':task_id, 'request_position': request_pos, 'is_true_anomaly': is_true_anomaly,
-                                              'trust_value_towards_provider': trust_value_towards_provider, 'trust_value_to_provider': trust_value_to_provider}
+                                              'trust_value_towards_provider': trust_value_towards_provider,
+                                              'trust_value_to_provider': trust_value_to_provider,
+                                              'reporter_trustworthiness': reporter_trustworthiness}
+    def get_recharging_robots(self):
+        return self.recharging_robots
+
+    def set_recharging_robot(self, robot_id):
+        self.recharging_robots.append(robot_id)
+
+    def check_if_rechargable(self, task_to_robot, robot_id):
+        is_rechargable = True
+        # only keep those tasks related with the robot himself:
+        task_to_robots = {task: robots for task, robots in task_to_robot.items() if robot_id in robots}
+        for task, robots in task_to_robots.items():
+            for robot in self.recharging_robots:
+                try:
+                    robots.remove(robot)
+                except:
+                    pass
+            if len(robots) == 1:
+                is_rechargable = False
+                return is_rechargable
+
+        return is_rechargable
+    def release_recharging_robot(self, robot_id):
+        self.recharging_robots.remove(robot_id)
 
     def collect_reporter_history(self, reporter_history):
         reporter_id = reporter_history[0]
@@ -109,52 +148,68 @@ class StaticMonitor(Monitor):
     def get_history_as_reporter(self, reporter_id, provider_id):
         return self.reporter_histories[reporter_id][provider_id]
 
-    def get_history_as_reporter_witness_FIRE(self, reporter_id, provider_id, local_history_length = 10, referral_length=2, communication_range = 9999999):
+    def get_history_as_reporter_witness_FIRE(self, reporter_id, provider_id, local_history_length = 10, referral_length=2):
+
         witness_history = {}
+        max_jumps = referral_length
         try:
             current_robot_pos = self.robot_pos[-1]
-        except: # spot anomaly in the first round, no pos information recorded yet
+        except:  # Spot anomaly in the first round, no pos information recorded yet
             return []
 
-        reporter_pos = current_robot_pos[reporter_id]
-        for i, pos in enumerate(current_robot_pos):
-            distance = ((pos[0]-reporter_pos[0])**2 + (pos[1]-reporter_pos[1])**2) ** 0.5
-            if distance <= communication_range and i != reporter_id and i != provider_id:
-                witness_history[i] = self.reporter_histories[i][provider_id][-local_history_length:]
+        robot_within_communication = [(reporter_id, 0)]  # Tuple with robot ID and jump level
+        visited_robot = {reporter_id}
 
-                # todo: add referral chain
-                # if witness_history[i] == [] and referral_length == 2:
-                #     reporter_pos2 = current_robot_pos[i]
-                #     for i2, pos2 in enumerate(current_robot_pos):
-                #         distance2 = ((pos2[0] - reporter_pos2[0]) ** 2 + (pos2[1] - reporter_pos2[1]) ** 2) ** 0.5
-                #         if distance2 <= communication_range and i2 != reporter_id and i2 != i:
-                #             witness_history[i2] = self.reporter_histories[i2][provider_id][-local_history_length:]
+        # Use a while loop to avoid modifying the list while iterating over it
+        while robot_within_communication:
+            robot, current_jump = robot_within_communication.pop(
+                0)  # Process the first robot in the list with its jump level
+            center_robot_pos = current_robot_pos[robot]
+
+            if current_jump >= max_jumps:
+                continue  # Stop processing if the maximum number of jumps is reached
+
+            for i, pos in enumerate(current_robot_pos):
+                distance = ((pos[0] - center_robot_pos[0]) ** 2 + (pos[1] - center_robot_pos[1]) ** 2) ** 0.5
+
+                if distance <= self.robot_communication_range and i not in visited_robot and i != provider_id:
+                    witness_history[i] = self.reporter_histories[i][provider_id][-local_history_length:]
+                    # Add to the list to process if not already visited
+                    robot_within_communication.append((i, current_jump + 1))
+                    visited_robot.add(i)
 
         return sum(list(witness_history.values()),[])
 
-    def get_history_as_provider_witness_FIRE(self, reporter_id, provider_id, local_history_length = 10, referral_length=2, communication_range = 9999999):
+    def get_history_as_provider_witness_FIRE(self, reporter_id, provider_id, local_history_length=10, referral_length=2):
         witness_history = {}
+        max_jumps = referral_length
         try:
             current_robot_pos = self.robot_pos[-1]
-        except: # spot anomaly in the first round, no pos information recorded yet
+        except:  # Spot anomaly in the first round, no pos information recorded yet
             return []
 
-        provider_pos = current_robot_pos[provider_id]
-        for i, pos in enumerate(current_robot_pos):
-            distance = ((pos[0]-provider_pos[0])**2 + (pos[1]-provider_pos[1])**2) ** 0.5
-            if distance <= communication_range and i != provider_id and i != reporter_id:
-                witness_history[i] = self.provider_histories[i][reporter_id][-local_history_length:]
+        # Initialize the list with the provider and set the initial jump count to 0
+        robot_within_communication = [(provider_id, 0)]  # Tuple with robot ID and jump level
+        visited_robot = {provider_id}
 
-                # if witness_history[i] == [] and referral_length == 2:
-                #     reporter_pos2 = current_robot_pos[i]
-                #     for i2, pos2 in enumerate(current_robot_pos):
-                #         distance2 = ((pos2[0] - reporter_pos2[0]) ** 2 + (pos2[1] - reporter_pos2[1]) ** 2) ** 0.5
-                #         if distance2 <= communication_range and i2 != reporter_id and i2 != i:
-                #             witness_history[i2] = self.provider_histories[i2][provider_id][-local_history_length:]
+        # Use a while loop to avoid modifying the list while iterating over it
+        while robot_within_communication:
+            robot, current_jump = robot_within_communication.pop(0)  # Process the first robot in the list with its jump level
+            center_robot_pos = current_robot_pos[robot]
 
-        return sum(list(witness_history.values()),[])
+            if current_jump >= max_jumps:
+                continue  # Stop processing if the maximum number of jumps is reached
 
+            for i, pos in enumerate(current_robot_pos):
+                distance = ((pos[0] - center_robot_pos[0]) ** 2 + (pos[1] - center_robot_pos[1]) ** 2) ** 0.5
 
+                if distance <= self.robot_communication_range and i not in visited_robot and i != provider_id and i != reporter_id:
+                    witness_history[i] = self.provider_histories[i][reporter_id][-local_history_length:]
+                    # Add to the list to process if not already visited
+                    robot_within_communication.append((i, current_jump + 1))
+                    visited_robot.add(i)
+
+        return sum(list(witness_history.values()), [])
 
     def get_history_as_reporter_certified_witness_FIRE(self, reporter_id, provider_id):
         witness_history = {}
@@ -163,7 +218,6 @@ class StaticMonitor(Monitor):
         except: # spot anomaly in the first round, no pos information recorded yet
             return []
 
-        # todo: consider communication range in dynamic environment
         for i, pos in enumerate(current_robot_pos):
             if i != provider_id and i != reporter_id:
                 witness_history[i] = self.reporter_histories[i][provider_id]
@@ -183,97 +237,147 @@ class StaticMonitor(Monitor):
 
         return sum(list(witness_history.values()),[])
 
-
-    def get_history_as_reporter_witness_TRAVOS(self, reporter_id, provider_id, local_history_length = 10, referral_length=2, communication_range = 9999999):
+    def get_history_as_reporter_witness_TRAVOS(self, reporter_id, provider_id, local_history_length=10,
+                                               referral_length=2):
         witness_history = {}
+        max_jumps = referral_length  # Set the maximum number of jumps allowed
+
         try:
             current_robot_pos = self.robot_pos[-1]
-        except: # spot anomaly in the first round, no pos information recorded yet
+        except:  # Spot anomaly in the first round, no pos information recorded yet
             return {}
 
-        reporter_pos = current_robot_pos[reporter_id]
-        for i, pos in enumerate(current_robot_pos):
-            distance = ((pos[0]-reporter_pos[0])**2 + (pos[1]-reporter_pos[1])**2) ** 0.5
-            if distance <= communication_range and i != reporter_id and i != provider_id:
-                witness_history[i] = self.reporter_histories[i][provider_id][-local_history_length:]
+        # Initialize the list with the reporter and set the initial jump count to 0
+        robot_within_communication = [(reporter_id, 0)]  # Tuple with robot ID and jump level
+        visited_robot = {reporter_id}
 
-                # todo: add referral chain
-                # if witness_history[i] == [] and referral_length == 2:
-                #     reporter_pos2 = current_robot_pos[i]
-                #     for i2, pos2 in enumerate(current_robot_pos):
-                #         distance2 = ((pos2[0] - reporter_pos2[0]) ** 2 + (pos2[1] - reporter_pos2[1]) ** 2) ** 0.5
-                #         if distance2 <= communication_range and i2 != reporter_id and i2 != i:
-                #             witness_history[i2] = self.reporter_histories[i2][provider_id][-local_history_length:]
+        # Use a while loop to avoid modifying the list while iterating over it
+        while robot_within_communication:
+            robot, current_jump = robot_within_communication.pop(
+                0)  # Process the first robot in the list with its jump level
+            center_robot_pos = current_robot_pos[robot]
+
+            if current_jump >= max_jumps:
+                continue  # Stop processing if the maximum number of jumps is reached
+
+            for i, pos in enumerate(current_robot_pos):
+                distance = ((pos[0] - center_robot_pos[0]) ** 2 + (pos[1] - center_robot_pos[1]) ** 2) ** 0.5
+
+                if distance <= self.robot_communication_range and i not in visited_robot and i != reporter_id and i != provider_id:
+                    witness_history[i] = self.reporter_histories[i][provider_id][-local_history_length:]
+                    # Add to the list to process if not already visited
+                    robot_within_communication.append((i, current_jump + 1))
+                    visited_robot.add(i)
 
         return witness_history
 
-    def get_history_as_provider_witness_TRAVOS(self, reporter_id, provider_id, local_history_length = 10, referral_length=2, communication_range = 9999999):
+    def get_history_as_provider_witness_TRAVOS(self, reporter_id, provider_id, local_history_length=10,
+                                               referral_length=2):
         witness_history = {}
+        max_jumps = referral_length  # Set the maximum number of jumps allowed
+
         try:
             current_robot_pos = self.robot_pos[-1]
-        except: # spot anomaly in the first round, no pos information recorded yet
+        except:  # Spot anomaly in the first round, no pos information recorded yet
             return {}
 
-        provider_pos = current_robot_pos[provider_id]
-        for i, pos in enumerate(current_robot_pos):
-            distance = ((pos[0]-provider_pos[0])**2 + (pos[1]-provider_pos[1])**2) ** 0.5
-            if distance <= communication_range and i != provider_id and i != reporter_id:
-                witness_history[i] = self.provider_histories[i][reporter_id][-local_history_length:]
+        # Initialize the list with the provider and set the initial jump count to 0
+        robot_within_communication = [(provider_id, 0)]  # Tuple with robot ID and jump level
+        visited_robot = {provider_id}
 
-                # if witness_history[i] == [] and referral_length == 2:
-                #     reporter_pos2 = current_robot_pos[i]
-                #     for i2, pos2 in enumerate(current_robot_pos):
-                #         distance2 = ((pos2[0] - reporter_pos2[0]) ** 2 + (pos2[1] - reporter_pos2[1]) ** 2) ** 0.5
-                #         if distance2 <= communication_range and i2 != reporter_id and i2 != i:
-                #             witness_history[i2] = self.provider_histories[i2][provider_id][-local_history_length:]
+        # Use a while loop to avoid modifying the list while iterating over it
+        while robot_within_communication:
+            robot, current_jump = robot_within_communication.pop(
+                0)  # Process the first robot in the list with its jump level
+            center_robot_pos = current_robot_pos[robot]
+
+            if current_jump >= max_jumps:
+                continue  # Stop processing if the maximum number of jumps is reached
+
+            for i, pos in enumerate(current_robot_pos):
+                distance = ((pos[0] - center_robot_pos[0]) ** 2 + (pos[1] - center_robot_pos[1]) ** 2) ** 0.5
+
+                if distance <= self.robot_communication_range and i not in visited_robot and i != provider_id and i != reporter_id:
+                    witness_history[i] = self.provider_histories[i][reporter_id][-local_history_length:]
+                    # Add to the list to process if not already visited
+                    robot_within_communication.append((i, current_jump + 1))
+                    visited_robot.add(i)
 
         return witness_history
 
-    def get_history_as_reporter_witness_SUBJECTIVE(self, reporter_id, provider_id, last_interaction_timestep, local_history_length = 10, referral_length=2, communication_range = 9999999):
+    def get_history_as_reporter_witness_SUBJECTIVE(self, reporter_id, provider_id, last_interaction_timestep,
+                                                   local_history_length=10, referral_length=2):
         witness_history = {}
+        max_jumps = referral_length  # Set the maximum number of jumps allowed
+
         try:
             current_robot_pos = self.robot_pos[-1]
-        except: # spot anomaly in the first round, no pos information recorded yet
+        except:  # Spot anomaly in the first round, no pos information recorded yet
             return {}
 
-        reporter_pos = current_robot_pos[reporter_id]
-        for i, pos in enumerate(current_robot_pos):
-            distance = ((pos[0]-reporter_pos[0])**2 + (pos[1]-reporter_pos[1])**2) ** 0.5
-            if distance <= communication_range and i != reporter_id and i != provider_id:
-                old_history = [ history for history in self.reporter_histories[i][provider_id] if history[1] < last_interaction_timestep]
-                witness_history[i] = old_history[-local_history_length:]
+        # Initialize the list with the reporter and set the initial jump count to 0
+        robot_within_communication = [(reporter_id, 0)]  # Tuple with robot ID and jump level
+        visited_robot = {reporter_id}
 
+        # Use a while loop to avoid modifying the list while iterating over it
+        while robot_within_communication:
+            robot, current_jump = robot_within_communication.pop(
+                0)  # Process the first robot in the list with its jump level
+            center_robot_pos = current_robot_pos[robot]
 
-                # todo: add referral chain
-                # if witness_history[i] == [] and referral_length == 2:
-                #     reporter_pos2 = current_robot_pos[i]
-                #     for i2, pos2 in enumerate(current_robot_pos):
-                #         distance2 = ((pos2[0] - reporter_pos2[0]) ** 2 + (pos2[1] - reporter_pos2[1]) ** 2) ** 0.5
-                #         if distance2 <= communication_range and i2 != reporter_id and i2 != i:
-                #             witness_history[i2] = self.reporter_histories[i2][provider_id][-local_history_length:]
+            if current_jump >= max_jumps:
+                continue  # Stop processing if the maximum number of jumps is reached
+
+            for i, pos in enumerate(current_robot_pos):
+                distance = ((pos[0] - center_robot_pos[0]) ** 2 + (pos[1] - center_robot_pos[1]) ** 2) ** 0.5
+
+                if distance <= self.robot_communication_range and i not in visited_robot and i != reporter_id and i != provider_id:
+                    # Filter the history based on the last interaction timestep
+                    old_history = [history for history in self.reporter_histories[i][provider_id] if
+                                   history[1] < last_interaction_timestep]
+                    witness_history[i] = old_history[-local_history_length:]
+
+                    # Add to the list to process if not already visited
+                    robot_within_communication.append((i, current_jump + 1))
+                    visited_robot.add(i)
 
         return witness_history
 
-    def get_history_as_provider_witness_SUBJECTIVE(self, reporter_id, provider_id, last_interaction_timestep, local_history_length = 10, referral_length=2, communication_range = 9999999):
+    def get_history_as_provider_witness_SUBJECTIVE(self, reporter_id, provider_id, last_interaction_timestep,
+                                                   local_history_length=10, referral_length=2,):
         witness_history = {}
+        max_jumps = referral_length  # Set the maximum number of jumps allowed
+
         try:
             current_robot_pos = self.robot_pos[-1]
-        except: # spot anomaly in the first round, no pos information recorded yet
+        except:  # Spot anomaly in the first round, no pos information recorded yet
             return {}
 
-        provider_pos = current_robot_pos[provider_id]
-        for i, pos in enumerate(current_robot_pos):
-            distance = ((pos[0]-provider_pos[0])**2 + (pos[1]-provider_pos[1])**2) ** 0.5
-            if distance <= communication_range and i != provider_id and i != reporter_id:
-                old_history = [ history for history in self.provider_histories[i][reporter_id] if history[1] < last_interaction_timestep]
-                witness_history[i] = old_history[-local_history_length:]
+        # Initialize the list with the provider and set the initial jump count to 0
+        robot_within_communication = [(provider_id, 0)]  # Tuple with robot ID and jump level
+        visited_robot = {provider_id}
 
-                # if witness_history[i] == [] and referral_length == 2:
-                #     reporter_pos2 = current_robot_pos[i]
-                #     for i2, pos2 in enumerate(current_robot_pos):
-                #         distance2 = ((pos2[0] - reporter_pos2[0]) ** 2 + (pos2[1] - reporter_pos2[1]) ** 2) ** 0.5
-                #         if distance2 <= communication_range and i2 != reporter_id and i2 != i:
-                #             witness_history[i2] = self.provider_histories[i2][provider_id][-local_history_length:]
+        # Use a while loop to avoid modifying the list while iterating over it
+        while robot_within_communication:
+            robot, current_jump = robot_within_communication.pop(
+                0)  # Process the first robot in the list with its jump level
+            center_robot_pos = current_robot_pos[robot]
+
+            if current_jump >= max_jumps:
+                continue  # Stop processing if the maximum number of jumps is reached
+
+            for i, pos in enumerate(current_robot_pos):
+                distance = ((pos[0] - center_robot_pos[0]) ** 2 + (pos[1] - center_robot_pos[1]) ** 2) ** 0.5
+
+                if distance <= self.robot_communication_range and i not in visited_robot and i != provider_id and i != reporter_id:
+                    # Filter the history based on the last interaction timestep
+                    old_history = [history for history in self.provider_histories[i][reporter_id] if
+                                   history[1] < last_interaction_timestep]
+                    witness_history[i] = old_history[-local_history_length:]
+
+                    # Add to the list to process if not already visited
+                    robot_within_communication.append((i, current_jump + 1))
+                    visited_robot.add(i)
 
         return witness_history
 
@@ -354,6 +458,7 @@ class StaticMonitor(Monitor):
 
         # Show plot
         plt.show()
+
     def combined_reward_trust_with_untrustworthy_robot_plot(self, untrust_robot_id, strategy_name):
         # Data for the reward plot
         reward = []
