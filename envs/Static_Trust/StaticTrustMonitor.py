@@ -265,7 +265,7 @@ class StaticMonitor(Monitor):
         for i, pos in enumerate(current_robot_pos):
             distance = ((pos[0]-provider_pos[0])**2 + (pos[1]-provider_pos[1])**2) ** 0.5
             if distance <= communication_range and i != provider_id and i != reporter_id:
-                old_history = [ history for history in self.provider_histories[i][provider_id] if history[1] < last_interaction_timestep]
+                old_history = [ history for history in self.provider_histories[i][reporter_id] if history[1] < last_interaction_timestep]
                 witness_history[i] = old_history[-local_history_length:]
 
                 # if witness_history[i] == [] and referral_length == 2:

@@ -3,9 +3,9 @@ import itertools
 
 map_name = 'museum'
 patrol_algo = 'SEBS'
-timesteps = 3000
+timesteps = 10000
 robots_num = 8
-trust_algo = 'ML'
+trust_algo = 'FIRE'
 
 def gen_neighbours(adjacency):
     """
@@ -43,11 +43,11 @@ dynamic_trust_patrol_config = {
         'provider_select_strategy': 'trust', # random, determined, trust
         'trust_algo': trust_algo,
         'patrol_algo': patrol_algo,
-        'patrol_algo_name': 'Random',
+        'guide_algo': 'Random',
         'provider_select_randomness': 'boltzmann', # determined, boltzmann
         'service_strategy_based_on_trust': {'threshold':0}, #{threshold: 0.3}, {function:which function}
-        'communication_range': 10000,
-        'service_robot_id': 8,
+        'communication_range': 200,
+        'guide_robot_id': [8],
     },
     'algo_config':{
         'patrol_algo_name':patrol_algo,
@@ -62,6 +62,8 @@ dynamic_trust_patrol_config = {
         'uncooperative_list': [4],
         'trust_algo': trust_algo,
         'trust_mode': 'IT+WR',
+        'malicious_reporter_list': [],
+        'malicious_amplitude': -0.2,
     },
     'total_steps':timesteps,
     'result_dir_path': './results/dynamic/',
