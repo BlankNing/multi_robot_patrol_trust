@@ -142,7 +142,56 @@ class Monitor():
                 start_step = max(0, t * interval - 9)  # Ensure we don't go below 0
                 for position in robot_i_pos[start_step:t * interval]:
                     draw_5x5_square(draw, position, color)
-
             frames.append(img)
         frames[0].save(output_filename, save_all=True, append_images=frames[1:], loop=0, duration=20)
 
+    def create_patrol_gif_new(self, config_file, output_filename='patrol.gif'):
+        print("Start Creating GIF animation")
+        node_pos_matrix = config_file['env_config']['node_pos_matrix']
+        pgm_map_matrix = config_file['env_config']['pgm_map_matrix']
+        robots_num = config_file['robot_config']['robots_num']
+        height, width = pgm_map_matrix.shape
+        robot_positions = np.array(self.robot_pos)
+
+        # Create the background image
+        background = Image.new('RGB', (width, height), 'white')
+        draw_bg = ImageDraw.Draw(background)
+
+        # Draw the static background (walls and open space)
+        wall_coords = np.argwhere(pgm_map_matrix == 0)
+        for (y, x) in wall_coords:
+            draw_bg.point((x, y), fill='black')
+
+        # Draw interest points
+        def draw_square(draw, position, color, size=4):
+            x, y = position
+            for dx in range(-size, size + 1):
+                for dy in range(-size, size + 1):
+                    draw.point((x + dx, y + dy), fill=color)
+
+        for position in node_pos_matrix:
+            draw_square(draw_bg, position, (255, 0, 0), size=4)
+
+        # Pre-calculate colors for all robots
+        colors = [tuple((np.array(cm.rainbow(i / robots_num)[:3]) * 255).astype(int)) for i in range(robots_num)]
+
+        frames = []
+        interval = 2
+        frame_range = range(len(self.robot_pos))
+
+        for t in tqdm(frame_range, desc="Creating GIF frames", unit="frame"):
+            img = background.copy()
+            draw = ImageDraw.Draw(img)
+
+            for i in range(robots_num):
+                robot_i_pos = robot_positions[:, i]
+                color = colors[i]
+
+                start_step = max(0, t * interval - 9)  # Ensure we don't go below 0
+                for position in robot_i_pos[start_step:t * interval]:
+                    draw_square(draw, position, color, size=2)
+
+            frames.append(img)
+
+        # Save the GIF
+        frames[0].save(output_filename, save_all=True, append_images=frames[1:], loop=0, duration=20)

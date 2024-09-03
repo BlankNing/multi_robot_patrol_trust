@@ -41,7 +41,7 @@ def consensus_opinion(op1, op2):
     :param op2: Opinion from source 2
     :return: Combined Opinion object
     """
-    if op1.uncertainty + op2.uncertainty - op1.uncertainty * op2.uncertainty !=0:
+    if op1.uncertainty + op2.uncertainty - op1.uncertainty * op2.uncertainty != 0:
 
         combined = op1.uncertainty + op2.uncertainty - op1.uncertainty * op2.uncertainty
         b_combined = (op1.belief * op2.uncertainty + op2.belief * op1.uncertainty) / combined
@@ -51,7 +51,10 @@ def consensus_opinion(op1, op2):
         return Opinion(b_combined, d_combined, u_combined)
 
     else:
-        gamma = op2.uncertainty/op1.uncertainty
+        try:
+            gamma = op2.uncertainty/op1.uncertainty
+        except:
+            gamma = 0
         combined = gamma + 1
         b_combined = (gamma * op1.belief + op2.belief) / combined
         d_combined = (gamma * op1.disbelief + op2.disbelief) / combined
@@ -66,9 +69,9 @@ def discount_opinion(op1, op2):
     :param op2: Opinion provided by the recommender about another node
     :return: Discounted Opinion object
     """
-    b = op1.belief * op2.belief
+    b = op1.belief * op2.uncertainty
     d = op1.belief * op2.disbelief
-    u = op1.disbelief + op2.uncertainty + op1.uncertainty * op2.belief
+    u = op1.disbelief + op1.uncertainty + op1.belief * op2.uncertainty
 
     return Opinion(b, d, u)
 
@@ -82,10 +85,10 @@ def fading_opinion(op, m, decay_factor=0.1):
     :param decay_factor: Rate of decay per time interval
     :return: Faded Opinion object
     """
-    fading = math.exp(-decay_factor * m)
+    fading = 1 - math.exp(-decay_factor * m)
     new_b = fading * op.belief
     new_d = fading * op.disbelief
-    new_u = op.uncertainty + abs(new_d + new_b - (op.belief + op.disbelief)* (1 - fading))
+    new_u = op.uncertainty + abs(new_d + new_b - (op.belief + op.disbelief) * (1 - fading))
 
     return Opinion(new_b, new_d, new_u)
 
@@ -111,7 +114,7 @@ class SubjectiveLogicTrust(Trust):
         self.history_monitor = config['history_monitor']
         self.robot_num = config['robot_num']
         # useful info
-        self.H = 20
+        self.H = 30
         self.nBF = 1
         self.reporter_id = -1
         self.provider_id = -1
@@ -223,7 +226,7 @@ class SubjectiveLogicTrust(Trust):
         # update last interaction
         self.last_timestep_interaction_with_provider[reporter_id][provider_id] = timestep
 
-        return {'trust_value': trust_value, 'direct_opinion': direct_opinion, 'old_reputation': old_reputation_opinion, 'new_reputation': new_reputation_opinion}
+        return {'trust_value': trust_value, 'direct_opinion': direct_opinion, 'old_reputation': old_reputation_opinion, 'revised_reputation_opinion': revised_reputation_opinion, 'new_reputation': new_reputation_opinion}
 
 
 
@@ -241,8 +244,6 @@ class SubjectiveLogicTrust(Trust):
         # calculate direct opinion
         direct_opinion = self.calculate_direct_trust(filtered_histories)
 
-        # calculate old reputaion
-        init_op = Opinion(0, 0, 1)
         # only get the history before last interaction
         histories_dict = self.history_monitor.get_history_as_provider_witness_SUBJECTIVE(reporter_id, provider_id,
                                                                                          last_timestep_interaction_with_reporter,
@@ -272,22 +273,24 @@ class SubjectiveLogicTrust(Trust):
 
         new_reputation_opinion = self.calcluate_new_reputation(filtered_histories_dict, revised_reputation_opinion)
 
+        final_opinion = consensus_opinion(direct_opinion, new_reputation_opinion)
+
         # judge trust or not
-        trust_value = compare_opinion(new_reputation_opinion)
+        trust_value = compare_opinion(final_opinion)
 
         # update last interaction
         self.last_timestep_interaction_with_reporter[reporter_id][provider_id] = timestep
 
-        return {'trust_value': trust_value, 'direct_opinion': direct_opinion, 'old_reputation': old_reputation_opinion,
-                'new_reputation': new_reputation_opinion}
+        return {'trust_value': trust_value, 'final_opinion': final_opinion, 'direct_opinion': direct_opinion, 'old_reputation': old_reputation_opinion,
+                'revised_reputation_opinion': revised_reputation_opinion, 'new_reputation': new_reputation_opinion}
 
 
 
 # Example usage of the operators
 if __name__ == "__main__":
     # Example evidence to opinion conversion
-    opinion_a = evidence_to_opinion(3, 1, 1)
-    opinion_b = evidence_to_opinion(2, 2, 1)
+    opinion_a = evidence_to_opinion(3, 0, 0)
+    opinion_b = evidence_to_opinion(0, 0, 1)
     print(f"Opinion A: {opinion_a}")
     print(f"Opinion B: {opinion_b}")
 

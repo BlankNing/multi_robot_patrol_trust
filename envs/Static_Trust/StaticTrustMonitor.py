@@ -296,6 +296,14 @@ class StaticMonitor(Monitor):
         plt.plot(timestep, reward)
         plt.show()
 
+    def average_reward_per_round(self):
+        reward = []
+        for h in self.histories:
+            reward.append(h['reporter_reward'] + h['provider_reward'])
+        average_reward = sum(reward)/len(reward)
+        print(average_reward)
+        return average_reward
+
     def trust_with_untrustworthy_plot(self, untrust_robot_id):
         is_true_anomaly = []
         timestep = []

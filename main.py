@@ -24,8 +24,14 @@ import logging
 from datetime import datetime
 import os
 import random
+import copy
 
-print(config)
+display_config = copy.deepcopy(config)
+display_config['env_config'] = {}
+print(display_config)
+
+trust_method = config['robot_config']['service_select_strategy']
+trust_algorithm = config['trust_config']['trust_algo']
 
 # set the logging system, create necessary file folders
 result_dir_path = config['result_dir_path']
@@ -65,9 +71,10 @@ print(env.monitor.histories)
 # save interaction history as csv
 import pandas as pd
 data = pd.DataFrame(env.monitor.histories)
-data.to_csv(os.path.join(result_dir, 'histories.csv'))
+data.to_csv(os.path.join(result_dir, f'{trust_algorithm}_{trust_method}_histories.csv'))
 
-env.monitor.plot_idleness_in_range([i for i in range(6)])
-
+# env.monitor.plot_idleness_in_range([i for i in range(6)])
 # env.monitor.combined_reward_trust_with_all_robot_plot(0, config['robot_config']['service_select_strategy'])
-env.monitor.create_patrol_gif(config, 'SEBS_museum_recharge_service.gif')
+# env.monitor.create_patrol_gif_new(config, 'SEBS_museum_recharge_service.gif')
+
+re = env.monitor.average_reward_per_round()

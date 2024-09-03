@@ -35,7 +35,7 @@ class StaticRobot(Robot):
             self.false_positve = config_file['false_positive_abnormal']
 
         # set up uncooperative robot
-        if self.id not in uncooperative_list:
+        if self.id in uncooperative_list:
             self.uncooperativeness = config_file['uncooperativeness']
         else:
             self.uncooperativeness = 0
@@ -242,7 +242,10 @@ class StaticRobot(Robot):
                     if trust_robot != [] and uncertain_robot != []:
                         chosen_list = random.choices([trust_robot, uncertain_robot], weights=[0.85, 0.15])[0]
                         most_trustworthy_robot_id = random.choice(chosen_list)
+                    elif trust_robot != []:
                         most_trustworthy_robot_id = random.choice(trust_robot)
+                    elif uncertain_robot != []:
+                        most_trustworthy_robot_id = random.choice(uncertain_robot)
                     else:
                         try:
                             most_trustworthy_robot_id = random.choice(uncertain_robot)
@@ -336,7 +339,7 @@ class StaticRobot(Robot):
             elif self.service_strategy_based_on_trust == 'function':
                 return self.function_based_service_strategy(trust_value), trust_record
 
-        elif self.service_select_strategy =='good':
+        elif self.service_select_strategy == 'good':
             return 1, 'good'
         elif self.service_select_strategy == 'bad':
             return 0, 'bad'
@@ -419,8 +422,7 @@ class StaticRobot(Robot):
             # move 1 step
             self.current_pos = self.path_list[0]
             self.path_list.pop(0)
-            # self.logger.info(
-            #     f"Robot {self.id}, Current Position: {self.current_pos}, Current State: {self.state}, Last Node: {self.last_node},")
+
 
         # If someone is requesting for help at this timestep, switch to provider mode
         if self.monitor.check_request(self.id, timestep) != None:
@@ -468,6 +470,9 @@ class StaticRobot(Robot):
             self.logger.info(
                 f"Provider_id {self.id}, Provider Position: {self.current_pos}, Last Node: {self.last_node},"
                 f" Request record: {impression}")
+
+        self.logger.info(
+            f"Robot {self.id}, Current Position: {self.current_pos}, Current State: {self.state}, Last Node: {self.last_node},")
 
         # For visualisation
         if verbose == True:

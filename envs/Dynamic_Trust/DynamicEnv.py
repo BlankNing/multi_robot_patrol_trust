@@ -10,6 +10,10 @@ from collections import deque
 import numpy as np
 import random
 
+from patrol_algo.AlgoFactory import AlgoFactory
+from patrol_algo.algo_config_dispatch import get_algo_config
+
+# todo: something wrong with this environment, robot stop providing services one by one
 class DynamicEnv(BasicEnv):
     '''
     0. basic patrol
@@ -61,13 +65,23 @@ class DynamicEnv(BasicEnv):
         self.monitor.collect_robot_pos(self.init_pos)
         # collect init idleness
         self.monitor.collect_node_idleness([0 for _ in range(self.nodes_num)])
+        #sweep_engine
+        self.sweep_patrol_algo = config_file['sweep_algo_config']['patrol_algo_name']
+        patrol_algo_config = get_algo_config(config_file, self.sweep_patrol_algo)
+        self.sweep_engine = AlgoFactory().create_algo(self.sweep_patrol_algo, patrol_algo_config)
+        #guide engine
+        self.guide_patrol_algo = config_file['guide_algo_config']['patrol_algo_name']
+        patrol_algo_config = get_algo_config(config_file, self.guide_patrol_algo)
+        self.guide_engine = AlgoFactory().create_algo(self.guide_patrol_algo, patrol_algo_config)
         # Static Robot Init
         self.robots = [DynamicRobot(i, self.algo_engine, self.node_pos_matrix, self.init_pos[i], self.untrust_list,
                                     self.uncooperative_list, self.trust_dynamic, self.cooperativeness_dynamic,
-                                    self.monitor, self.trust_engine,
+                                    self.monitor, self.trust_engine, self.guide_engine, self.sweep_engine,
                                     self.robot_config) for i in range(self.robots_num)]
         self.service_robots = self.robot_config['guide_robot_id']
+        self.sweep_robots = self.robot_config['sweep_robot_id']
         self.cycle_history = deque(maxlen=3)
+
 
     def update_anomaly_random_report(self):
         '''
@@ -92,8 +106,13 @@ class DynamicEnv(BasicEnv):
             for agent_number, intention_agent in enumerate(self.robots):
                 # only consider patrolling robots, not recharding or service robot.
                 # only consider patrol robots, not guide robots
-                self.intention_table[agent_number] = intention_agent.goal_node if (intention_agent.state == 'Patrolling'
-                                                                                   and not intention_agent.is_guide_robot) else -1
+                if self.patrol_algo == 'SEBS':
+                    self.intention_table[agent_number] = intention_agent.goal_node if (intention_agent.state == 'Patrolling'
+                                                                                       and not intention_agent.is_guide_robot
+                                                                                       and not intention_agent.is_sweep_robot) else -1
+                else:
+                    self.intention_table = None
+
             idleness_log = self.monitor.get_latest_idleness()
             robot_pos_record, env_interaction_impression, robot_current_state = robot.step(verbose=verbose, timestep=self.timestep,
                                                                       intention_table=self.intention_table,
@@ -176,12 +195,18 @@ class DynamicEnv(BasicEnv):
                         interaction_history['rating_to_reporter'] = max(-1, min(1, interaction_history['rating_to_reporter']))
                         interaction_history['is_malicous_spreader_provider'] = 1
 
-                    # adjust the reward according to the character of different robots
+                    # adjust the reward according to the character of different robots, see if the reporter can learn to not interact with him
                     if interaction_history['provider_id'] in self.service_robots:
                         interaction_history['provider_is_guide_robot'] = 1
                         interaction_history['provider_reward'] /= 2
                         interaction_history['reporter_reward'] /= 2
                         interaction_history['rating_to_provider'] /= 2
+
+                    if interaction_history['provider_id'] in self.service_robots:
+                        interaction_history['provider_is_sweep_robot'] = 1
+                        interaction_history['provider_reward'] /= 1.5
+                        interaction_history['reporter_reward'] /= 1.5
+                        interaction_history['rating_to_provider'] /= 1.5
 
                     # all data should be process through interaction_histories
                     interaction_histories.append(interaction_history)

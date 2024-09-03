@@ -1,6 +1,7 @@
 from basic_patrol_class.Monitor import Monitor
 import matplotlib.pyplot as plt
 import numpy as np
+import random
 class DynamicMonitor(Monitor):
     def __init__(self, robot_num):
         super().__init__()
@@ -74,6 +75,7 @@ class DynamicMonitor(Monitor):
             distance = max([history['distance_penalty'] for history in self.histories if history['reporter_id'] == reporter_id and history['report_time'] == timestep - 2])
         except:
             distance = 0
+        # because reporter only need to wait until all robots come to help, and then it can run away.
         return distance/2
 
     def inform_request(self, request_robot_id, name_list, request_pos, is_true_anomaly, timestep, trust_value_towards_provider, reporter_trustworthiness):
@@ -120,6 +122,14 @@ class DynamicMonitor(Monitor):
         return is_rechargable
     def release_recharging_robot(self, robot_id):
         self.recharging_robots.remove(robot_id)
+
+    def average_reward_per_round(self):
+        reward = []
+        for h in self.histories:
+            reward.append(h['reporter_reward'] + h['provider_reward'])
+        average_reward = sum(reward)/len(reward)
+        print(average_reward)
+        return average_reward
 
     def collect_reporter_history(self, reporter_history):
         reporter_id = reporter_history[0]
