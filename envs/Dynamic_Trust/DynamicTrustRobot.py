@@ -3,12 +3,9 @@ import logging
 import numpy as np
 import random
 
-from patrol_algo.AlgoFactory import AlgoFactory
-from patrol_algo.algo_config_dispatch import get_algo_config
-
 
 class DynamicRobot(Robot):
-    def __init__(self, id, algo_engine, node_pos_matrix, init_pos, untrust_list, uncooperative_list, trust_dynamic, cooperativeness_dynamic, monitor, trust_engine, config_file):
+    def __init__(self, id, algo_engine, node_pos_matrix, init_pos, untrust_list, uncooperative_list, monitor, trust_engine, config_file):
         super().__init__(id, algo_engine, node_pos_matrix, init_pos)
 
         # {robot id: [capable task list]}
@@ -25,23 +22,10 @@ class DynamicRobot(Robot):
         self.trust_algo = config_file['trust_algo']
         self.patrol_algo = config_file['patrol_algo']
         self.robot_num = config_file['robots_num']
-        self.guide_robot_id = config_file['guide_robot_id']
-        self.is_guide_robot = self.id in self.guide_robot_id
-
-        if self.is_guide_robot:
-            self.guide_patrol_algo = config_file['guide_algo']
-            self.patrol_algo_config = get_algo_config(config_file)
-            self.algo_engine = AlgoFactory().create_algo(self.guide_patrol_algo, self.patrol_algo_config)
-
         self.monitor = monitor
         self.trust_engine = trust_engine
         self.service_time = 0
         self.last_node = int(self.check_node())
-        self.trust_dynamic_timestep = trust_dynamic
-        self.cooperativeness_dynamic_timestep = cooperativeness_dynamic
-        # battery simulation and recharge time:
-        self.battery_time = random.randint(2000, 8000)
-        self.recharge_time = random.randint(300, 600)
         if self.patrol_algo == 'SEBS':
             self.goal_node = self.algo_engine.determine_goal(np.zeros(len(self.monitor.get_latest_idleness())),
                                                              np.full(self.robot_num, config_file['dimension'] + 1),
@@ -49,12 +33,8 @@ class DynamicRobot(Robot):
         self.task_to_robot = self.generate_task_to_robot()
         # load logging system
         self.logger = logging.getLogger(__name__)
-        # inform monitor robot's communication range
-        self.monitor.update_robot_communication_range(self.communication_range)
-        # set up untrustworthy robot
-        self.trustworthy_robot_setting = (config_file['true_positive_trustworthy'], config_file['false_positive_trustworthy'])
-        self.untrustworthy_robot_setting = (config_file['true_positive_abnormal'], config_file['false_positive_abnormal'])
 
+        # set up untrustworthy robot
         if self.id not in untrust_list:
             self.true_positive = config_file['true_positive_trustworthy']
             self.false_positve = config_file['false_positive_trustworthy']
@@ -63,8 +43,6 @@ class DynamicRobot(Robot):
             self.false_positve = config_file['false_positive_abnormal']
 
         # set up uncooperative robot
-        self.uncooperative_robot_setting = config_file['uncooperativeness']
-
         if self.id not in uncooperative_list:
             self.uncooperativeness = config_file['uncooperativeness']
         else:
@@ -285,6 +263,7 @@ class DynamicRobot(Robot):
 
         return final_task_list, trust_value_records
 
+    # todo: choose_service_provider based on trust engine
     def choose_service_provider(self, required_tasks, timestep):
         '''
         :param required_tasks: list eg: [0,2,3]; task_to_robot {task:[all robots that are capable of this task]}
@@ -305,17 +284,12 @@ class DynamicRobot(Robot):
                         }
                     }
         '''
-        # todo: update task_to_robot to prevent requesting recharging robot
         # 1. delete the other unrequired task
         task_to_robots = {key: self.task_to_robot[key] for key in required_tasks if key in self.task_to_robot}
         # 2. delete request robot id from the robot list
         for task, robots in task_to_robots.items():
             if self.id in robots:
                 robots.remove(self.id) # A robot cannot call itself to help
-            # 3. delete recharging robot
-            for robot in robots:
-                if robot in self.monitor.get_recharging_robots():
-                    robots.remove(robot)
 
         # select provider based on trust model
         if self.provider_select_strategy == 'trust':
@@ -342,6 +316,7 @@ class DynamicRobot(Robot):
         elif self.provider_select_strategy == 'determined':
             return {1: 1, 2: 2, 3: 3, 0: 4}, 'determined'
 
+    # todo: choose_service_quality based on trust engine/random/determined
     def choose_service_quality(self, request_robot_id, task_info, timestep):
         if self.service_select_strategy == 'trust':
             if self.trust_algo == 'FIRE':
@@ -396,72 +371,18 @@ class DynamicRobot(Robot):
                 task_to_robot[task].append(robot)
         return task_to_robot
 
-    def update_battery_time(self):
-        self.battery_time = random.randint(2000,8000)
-
-    def update_recharging_time(self):
-        self.recharge_time = random.randint(300, 600)
-
-    def check_trustworthy(self):
-        if (self.true_positive, self.false_positve) == self.trustworthy_robot_setting:
-            return 1
-        else:
-            return 0
-
-    def check_coopertaiveness(self):
-        if self.uncooperativeness == 0:
-            return 1
-        else:
-            return 0
-
     def step(self, verbose=False, **kwargs):
         timestep = kwargs.get('timestep')
         intention_table = kwargs.get('intention_table')
         idleness_log = kwargs.get('idleness_log')
         impression = {}
-        self.battery_time -= 1
 
-        # robot battery reaches 0, or below 0 because if it recahes 0 during reporting/serving, we let it finish its work
-        if self.battery_time <= 0 and self.state == 'Patrolling':
-            # if exist other robots that are capable of this task
-            if self.monitor.check_if_rechargable(self.task_to_robot, self.id):
-                self.state = ' Recharging'
-                self.update_recharging_time()
-                self.service_time = self.recharge_time
-                self.monitor.set_recharging_robot(self.id)
-            else:
-                # no robot is capable of carrying out this task, unable to leave and recharge
-                self.update_battery_time()
-
-        # If is in service state, update service time
+        # If is in service state:
         if self.service_time != 0:
             self.service_time -= 1
 
-        # check trust dynamic
-        if timestep in self.trust_dynamic_timestep.keys() and self.id in self.trust_dynamic_timestep[timestep].keys():
-            if self.trust_dynamic_timestep[timestep][self.id]: # become trustworthy
-                self.true_positive = self.trustworthy_robot_setting[0]
-                self.false_positve = self.trustworthy_robot_setting[1]
-            else: # become untrustworthy
-                self.true_positive = self.untrustworthy_robot_setting[0]
-                self.false_positve = self.untrustworthy_robot_setting[1]
-
-        # check cooperativeness dynamic
-        if timestep in self.cooperativeness_dynamic_timestep.keys() and self.id in self.cooperativeness_dynamic_timestep[timestep].keys():
-            if self.cooperativeness_dynamic_timestep[timestep][self.id]: # become cooperative
-                self.uncooperativeness = 0
-            else: # become uncooperative
-                self.uncooperativeness = self.uncooperative_robot_setting
-
-        # parameters all updated, start patrol/request/provide
-        # If reach an interest point, and it's not in a detection cycle, then could find anomaly
-        # and it's not a service robot, service robot only provide help
-        if self.path_list == [] and self.is_guide_robot:
-            # check which node robot is on
-            self.last_node = int(self.check_node())
-            self.path_list = self.algo_engine.calculate_next_path(self.id, self.last_node)
-
-        if self.path_list == [] and not self.is_guide_robot:
+        # If reach an interest point, could find anomaly
+        if self.path_list == []:
             # check current anomaly point position
             self.true_anomaly_pos = self.monitor.get_anomaly_pos()
             # check which node robot is on
@@ -473,10 +394,9 @@ class DynamicRobot(Robot):
             elif self.patrol_algo == 'SEBS':
                 # get the latest idleness log
                 self.path_list, self.goal_node = self.algo_engine.calculate_next_path(self.id, idleness_log, intention_table, self.last_node)
-
-            # start anomaly detection and cooperation
             # check if it's still in anomaly cycle
             anomaly_detect_cycle_flag = self.monitor.get_in_cycle_flag()
+
             # report anomaly with probability when arriving at a node
             if self.last_node == self.true_anomaly_pos:
                 # if detected and no progressing anomaly detection cycle
@@ -487,9 +407,9 @@ class DynamicRobot(Robot):
                                                    random.randint(1, len(self.required_tasks_list)))
                     # choose service provider based on trust
                     name_list, trust_record = self.choose_service_provider(required_tasks, timestep)
-                    self.monitor.inform_request(self.id, name_list, self.current_pos, 1, timestep, trust_record, self.check_trustworthy())
+                    self.monitor.inform_request(self.id, name_list, self.current_pos, 1, timestep, trust_record)
                     # determine service_time based on astar distance
-                    self.service_time = 2  # waiting for report
+                    self.service_time = 1  # speed up the procedure
                     self.logger.info(
                         f"Reporter_id {self.id}, Reporter Position: {self.current_pos}, Last Node: {self.last_node},"
                         f" Required tasks: {required_tasks}, Required robot namelist: {name_list}, True/False anomaly: True, Trust record: {trust_record}")
@@ -502,27 +422,16 @@ class DynamicRobot(Robot):
                                                    random.randint(1, len(self.required_tasks_list)))
                     # choose service provider based on trust
                     name_list, trust_record = self.choose_service_provider(required_tasks, timestep)
-                    self.monitor.inform_request(self.id, name_list, self.current_pos, 0, timestep, trust_record, self.check_trustworthy())
-                    self.service_time = 2 # wait 2 timestep for the monitor to gather providers' decision, and then update waiting time
+                    self.monitor.inform_request(self.id, name_list, self.current_pos, 0, timestep, trust_record)
+                    self.service_time = 1  # speed up the procedure
                     self.logger.info(
                         f"Reporter_id {self.id}, Reporter Position: {self.current_pos}, Last Node: {self.last_node},"
                         f" Required tasks: {required_tasks}, Required robot namelist: {name_list}, True/False anomaly: False, Trust record: {trust_record}")
 
-        # see how long have to wait until the service robot come to provide
-        if 'Requesting' in self.state and self.service_time == 0:
-            self.service_time = self.monitor.check_waiting_time_reporter(self.id, timestep)
-
-        # this is behind anomaly reporting section because we want robot to move away after one anomaly detection cycle
-        if self.service_time == 0 and self.state == 'Recharging':
-            # update battery time, cant put it in the next if because service_time=0 can result from requesting/serving
-            self.battery_time = self.update_battery_time()
-            # update task_to_robot, this robot is ready to serve again
-            self.monitor.release_recharging_robot(self.id)
-
         # if didn't find anomaly or providing services, robot move
         if self.service_time == 0:
             self.state = 'Patrolling'
-            # move back to the path_list, move 1 step
+            # move 1 step
             self.current_pos = self.path_list[0]
             self.path_list.pop(0)
             # self.logger.info(
@@ -546,7 +455,6 @@ class DynamicRobot(Robot):
             impression['service_position'] = self.current_pos
             impression['service_time'] = timestep
             impression['is_same_type'] = 1 if self.robots_capable_tasks[request_robot_id] == self.robots_capable_tasks[self.id] else 0
-            impression['provider_cooperativeness'] = self.check_coopertaiveness()
             is_true_anomaly = impression['is_true_anomaly']
 
             if service_quality == 1:
@@ -556,7 +464,7 @@ class DynamicRobot(Robot):
                 distance = abs(self.current_pos[0] - current_request['request_position'][0]) + abs(
                     self.current_pos[1] - current_request['request_position'][1])
                 # self.service_time = distance
-                self.service_time = distance  # in dynamic environment, you have to show the service time.
+                self.service_time = 0  # trick for speeding up the simulation
                 impression['distance'] = distance
                 # record reward
                 if is_true_anomaly == 1:
@@ -580,4 +488,4 @@ class DynamicRobot(Robot):
         if verbose == True:
             print(f"Robot_{self.id} {self.state} at {self.current_pos}")
 
-        return self.current_pos, impression, self.state
+        return self.current_pos, impression

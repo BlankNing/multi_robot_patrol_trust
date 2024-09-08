@@ -4,20 +4,10 @@ def get_algo_config(config_file):
     map_adj_matrix = config_file['env_config']['map_adj_matrix']
     pgm_map_matrix = config_file['env_config']['pgm_map_matrix']
     patrol_algo = config_file['algo_config']['patrol_algo_name']
-    guide_patrol_algo = config_file['guide_algo_config']['patrol_algo_name']
     init_pos = config_file['robot_config']['init_pos']
     robots_num = config_file['robot_config']['robots_num']
 
     if patrol_algo == 'partition':
-        partition_algo_config  = {
-            'robots_num': robots_num,
-            'nodes_num': len(node_pos_matrix),
-            'pgm_map_matrix': pgm_map_matrix,
-            'node_pos_matrix': node_pos_matrix
-        }
-        return partition_algo_config
-
-    elif patrol_algo == 'Random':
         partition_algo_config  = {
             'robots_num': robots_num,
             'nodes_num': len(node_pos_matrix),
@@ -34,14 +24,5 @@ def get_algo_config(config_file):
             'node_pos_matrix': node_pos_matrix,
             'map_adj_matrix': map_adj_matrix,
             'neighbour_matrix': config_file['env_config']['neighbour_matrix'],
-        }
-        return partition_algo_config
-
-    elif guide_patrol_algo == 'Random':
-        partition_algo_config  = {
-            'robots_num': robots_num,
-            'nodes_num': len(node_pos_matrix),
-            'pgm_map_matrix': pgm_map_matrix,
-            'node_pos_matrix': node_pos_matrix
         }
         return partition_algo_config

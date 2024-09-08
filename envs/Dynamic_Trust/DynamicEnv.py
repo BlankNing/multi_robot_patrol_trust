@@ -1,7 +1,6 @@
 import logging
 
 from basic_patrol_class.Env import BasicEnv
-from patrol_algo.AlgoFactory import AlgoFactory
 from .DynamicTrustRobot import DynamicRobot
 from .DynamicTrustMonitor import DynamicMonitor
 from trust_algo.trust_config_dispatch import get_trust_algo_config
@@ -27,11 +26,6 @@ class DynamicEnv(BasicEnv):
         # init untrustworthy robots
         self.untrust_list = config_file['trust_config']['untrust_list']
         self.uncooperative_list = config_file['trust_config']['uncooperative_list']
-        self.malicous_reporter_list = config_file['trust_config']['malicious_reporter_list']
-        self.malicous_amplitude = config_file['trust_config']['malicious_amplitude']
-        # init trust/cooperativeness dynamic
-        self.trust_dynamic = config_file['trust_config']['trust_dynamic']
-        self.cooperativeness_dynamic = config_file['trust_config']['cooperativeness_dynamic']
         # init trust algorithm
         self.trust_algo = config_file['trust_config']['trust_algo']
         self.trust_algo_config = get_trust_algo_config(config_file)
@@ -62,11 +56,8 @@ class DynamicEnv(BasicEnv):
         # collect init idleness
         self.monitor.collect_node_idleness([0 for _ in range(self.nodes_num)])
         # Static Robot Init
-        self.robots = [DynamicRobot(i, self.algo_engine, self.node_pos_matrix, self.init_pos[i], self.untrust_list,
-                                    self.uncooperative_list, self.trust_dynamic, self.cooperativeness_dynamic,
-                                    self.monitor, self.trust_engine,
-                                    self.robot_config) for i in range(self.robots_num)]
-        self.service_robots = self.robot_config['guide_robot_id']
+        self.robots = [DynamicRobot(i, self.algo_engine, self.node_pos_matrix, self.init_pos[i], self.untrust_list, self.uncooperative_list, self.monitor, self.trust_engine, self.robot_config) for i in range(self.robots_num)]
+
         self.cycle_history = deque(maxlen=3)
 
     def update_anomaly_random_report(self):
@@ -86,20 +77,15 @@ class DynamicEnv(BasicEnv):
         interaction_flag = False
         robot_pos_records = []
         env_interaction_impressions= []
-        robot_current_states = []
         for robot in self.robots:
-            # intention_table calculation
+            # todo: intention_table
             for agent_number, intention_agent in enumerate(self.robots):
-                # only consider patrolling robots, not recharding or service robot.
-                # only consider patrol robots, not guide robots
-                self.intention_table[agent_number] = intention_agent.goal_node if (intention_agent.state == 'Patrolling'
-                                                                                   and not intention_agent.is_guide_robot) else -1
+                self.intention_table[agent_number] = intention_agent.goal_node
             idleness_log = self.monitor.get_latest_idleness()
-            robot_pos_record, env_interaction_impression, robot_current_state = robot.step(verbose=verbose, timestep=self.timestep,
+            robot_pos_record, env_interaction_impression = robot.step(verbose=verbose, timestep=self.timestep,
                                                                       intention_table=self.intention_table,
                                                                       idleness_log=idleness_log)
             robot_pos_records.append(robot_pos_record)
-            robot_current_states.append(robot_current_state)
             env_interaction_impressions.append(env_interaction_impression)
             interaction_flag = not all(element == {} for element in env_interaction_impressions)
             # check if we are in an anomaly detection cycle
@@ -144,9 +130,7 @@ class DynamicEnv(BasicEnv):
                     interaction_history = {
                         'is_true_anomaly': i['is_true_anomaly'],
                         'reporter_id': i['request_robot'],
-                        'reporter_trustworthiness': i['reporter_trustworthiness'],
                         'provider_id': i['service_robot'],
-                        'provider_cooperativeness': i['provider_cooperativeness'],
                         'task_id': i['task'],
                         'is_same_type': i['is_same_type'],
                         'report_time': i['time'],
@@ -162,31 +146,11 @@ class DynamicEnv(BasicEnv):
                         'rating_to_provider': rating_to_provider, # complex rating system, related with max
                         'distance_penalty': i['distance'],
                     }
-
-                    # Malicious rating individual, regularise the rating between 0 and 1
-                    if interaction_history['reporter_id'] in self.malicous_reporter_list:
-                        interaction_history['rating_to_provider_truth'] = i['rating_to_provider']
-                        interaction_history['rating_to_provider'] += self.malicous_amplitude
-                        interaction_history['rating_to_provider'] = max(-1, min(1, interaction_history['rating_to_provider']))
-                        interaction_history['is_malicous_spreader_reporter'] = 1
-
-                    if interaction_history['provider_id'] in self.malicous_reporter_list:
-                        interaction_history['rating_to_reporter_truth'] = i['rating_to_reporter']
-                        interaction_history['rating_to_reporter'] += self.malicous_amplitude
-                        interaction_history['rating_to_reporter'] = max(-1, min(1, interaction_history['rating_to_reporter']))
-                        interaction_history['is_malicous_spreader_provider'] = 1
-
-                    # adjust the reward according to the character of different robots
-                    if interaction_history['provider_id'] in self.service_robots:
-                        interaction_history['provider_is_guide_robot'] = 1
-                        interaction_history['provider_reward'] /= 2
-                        interaction_history['reporter_reward'] /= 2
-                        interaction_history['rating_to_provider'] /= 2
-
-                    # all data should be process through interaction_histories
                     interaction_histories.append(interaction_history)
 
                     # collect data for TRAVOS
+
+
                     # monitor collect history [service quality/is true anomaly, reward]
                     if i['service_quality'] == 1:
                         max_distance = i['distance'] if i['distance'] > max_distance else max_distance
@@ -202,6 +166,6 @@ class DynamicEnv(BasicEnv):
         # node record
         node_idleness_records = []
         for node in self.nodes:
-            node_idleness_record = node.step(robot_pos_records, robot_current_states)
+            node_idleness_record = node.step(robot_pos_records)
             node_idleness_records.append(node_idleness_record)
         self.monitor.collect_node_idleness(node_idleness_records)
