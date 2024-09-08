@@ -23,6 +23,7 @@ class DynamicRobot(Robot):
         self.robot_num = config_file['robots_num']
         self.guide_robot_id = config_file['guide_robot_id']
         self.sweep_robot_id = config_file['sweep_robot_id']
+        self.run_communication_comparison = config_file['run_communication_comparison']
         self.is_guide_robot = self.id in self.guide_robot_id
         self.is_sweep_robot = self.id in self.sweep_robot_id
         if self.is_guide_robot:
@@ -32,8 +33,12 @@ class DynamicRobot(Robot):
             self.algo_engine = sweep_engine
             self.patrol_algo = 'CGG'
 
-
         self.monitor = monitor
+        # set robot communication range
+        self.limited_communication_range = config_file['communication_range']
+        self.monitor.robot_communication_range = self.limited_communication_range
+        self.unlimited_communication_range = 999999999
+        # set trust engine
         self.trust_engine = trust_engine
         self.service_time = 0
         self.last_node = int(self.check_node())
@@ -95,8 +100,14 @@ class DynamicRobot(Robot):
 
                 # calculate the trust values of different robots working on the same task, store in trust_value
                 for i, provider_robot_id in enumerate(robots):
+                    self.monitor.robot_communication_range = self.limited_communication_range
                     trust_record = self.trust_engine.calculate_trust_value_reporter(self.id, provider_robot_id, task,
                                                                                     timestep, self.robots_capable_tasks)
+                    if self.run_communication_comparison:
+                        self.monitor.robot_communication_range = self.unlimited_communication_range
+                        unlimited_trust_record = self.trust_engine.calculate_trust_value_reporter(self.id, provider_robot_id, task,
+                                                                                        timestep, self.robots_capable_tasks)
+                        self.monitor.collect_trust_values(timestep, self.id, provider_robot_id, 'reporter_to_provider', trust_record, unlimited_trust_record)
                     trust_value = trust_record['trust_value']
                     # if there's no history, set trust value to np.nan
                     trust_value_record[provider_robot_id] = trust_record
@@ -144,6 +155,8 @@ class DynamicRobot(Robot):
         for task, robots in task_to_robots.items():
             if len(robots) == 1:
                 final_task_list[task] = robots[0]
+            elif len(robots) == 0: # ignore this task
+                pass
             else:
                 trust_value_record = {}
                 wait_reputation_robots = []
@@ -164,8 +177,20 @@ class DynamicRobot(Robot):
                 else:
                     # calculate combined trust to decide which robot to interact
                     for i, provider_robot_id in enumerate(wait_reputation_robots):
+                        self.monitor.robot_communication_range = self.limited_communication_range
                         trust_record = self.trust_engine.calculate_trust_value_reporter(self.id, provider_robot_id, task,
                                                                                     timestep, self.robots_capable_tasks)
+                        if self.run_communication_comparison:
+                            self.monitor.robot_communication_range = self.unlimited_communication_range
+                            unlimited_trust_record = self.trust_engine.calculate_trust_value_reporter(self.id,
+                                                                                                      provider_robot_id,
+                                                                                                      task,
+                                                                                                      timestep,
+                                                                                                      self.robots_capable_tasks)
+                            self.monitor.collect_trust_values(timestep, self.id, provider_robot_id,
+                                                              'reporter_to_provider', trust_record,
+                                                              unlimited_trust_record)
+
                         trust_value_record[provider_robot_id] = trust_record
 
                     max_trust = max(item['trust_value'] for item in trust_value_record.values())
@@ -189,8 +214,19 @@ class DynamicRobot(Robot):
 
                 # calculate the trust values of different robots working on the same task, store in trust_value
                 for i, provider_robot_id in enumerate(robots):
+                    self.monitor.robot_communication_range = self.limited_communication_range
                     trust_record = self.trust_engine.calculate_trust_value_reporter(self.id, provider_robot_id, task,
                                                                                     timestep, self.robots_capable_tasks)
+                    if self.run_communication_comparison:
+                        self.monitor.robot_communication_range = self.unlimited_communication_range
+                        unlimited_trust_record = self.trust_engine.calculate_trust_value_reporter(self.id,
+                                                                                                  provider_robot_id,
+                                                                                                  task,
+                                                                                                  timestep,
+                                                                                                  self.robots_capable_tasks)
+                        self.monitor.collect_trust_values(timestep, self.id, provider_robot_id,
+                                                          'reporter_to_provider', trust_record,
+                                                          unlimited_trust_record)
                     trust_value = trust_record['trust_value']
                     # if there's no history, set trust value to np.nan
                     trust_value_record[provider_robot_id] = trust_record
@@ -220,9 +256,13 @@ class DynamicRobot(Robot):
                         else:
                             chosen_list = max_keys
                         most_trustworthy_robot_id = random.choice(chosen_list)
+                        final_task_list[task] = most_trustworthy_robot_id
                     except:
-                        most_trustworthy_robot_id = random.choice(has_no_trust)
-                    final_task_list[task] = most_trustworthy_robot_id
+                        try:
+                            most_trustworthy_robot_id = random.choice(has_no_trust)
+                            final_task_list[task] = most_trustworthy_robot_id
+                        except:
+                            pass
 
                 trust_value_records[task] = trust_value_record
 
@@ -245,8 +285,19 @@ class DynamicRobot(Robot):
 
                 # calculate the trust values of different robots working on the same task, store in trust_value
                 for i, provider_robot_id in enumerate(robots):
+                    self.monitor.robot_communication_range = self.limited_communication_range
                     trust_record = self.trust_engine.calculate_trust_value_reporter(self.id, provider_robot_id, task,
                                                                                     timestep, self.robots_capable_tasks)
+                    if self.run_communication_comparison:
+                        self.monitor.robot_communication_range = self.unlimited_communication_range
+                        unlimited_trust_record = self.trust_engine.calculate_trust_value_reporter(self.id,
+                                                                                                  provider_robot_id,
+                                                                                                  task,
+                                                                                                  timestep,
+                                                                                                  self.robots_capable_tasks)
+                        self.monitor.collect_trust_values(timestep, self.id, provider_robot_id,
+                                                          'reporter_to_provider', trust_record,
+                                                          unlimited_trust_record)
                     trust_value = trust_record['trust_value']
                     # if there's no history, set trust value to np.nan
                     trust_value_record[provider_robot_id] = trust_record
@@ -275,14 +326,16 @@ class DynamicRobot(Robot):
                     if trust_robot != [] and uncertain_robot != []:
                         chosen_list = random.choices([trust_robot, uncertain_robot], weights=[0.85, 0.15])[0]
                         most_trustworthy_robot_id = random.choice(chosen_list)
-                        most_trustworthy_robot_id = random.choice(trust_robot)
                     else:
                         try:
                             most_trustworthy_robot_id = random.choice(uncertain_robot)
+                            final_task_list[task] = most_trustworthy_robot_id
                         except:
-                            most_trustworthy_robot_id = random.choice(untrust_robot)
-
-                    final_task_list[task] = most_trustworthy_robot_id
+                            try:
+                                most_trustworthy_robot_id = random.choice(untrust_robot)
+                                final_task_list[task] = most_trustworthy_robot_id
+                            except:
+                                pass
 
                 trust_value_records[task] = trust_value_record
 
@@ -339,7 +392,9 @@ class DynamicRobot(Robot):
 
         # select provider randomly across all the available robots
         elif self.provider_select_strategy == 'random':
-            return {task: random.choice(task_to_robots[task]) for task in required_tasks}, 'random'
+            return {task: random.choice(task_to_robots[task])
+                    for task in required_tasks
+                    if task_to_robots[task]}, 'random'
 
         # select provider with determined strategy
         elif self.provider_select_strategy == 'determined':
@@ -347,22 +402,53 @@ class DynamicRobot(Robot):
 
     def choose_service_quality(self, request_robot_id, task_info, timestep):
         if self.service_select_strategy == 'trust':
-            if self.trust_algo == 'FIRE':
-                trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
-            elif self.trust_algo == 'TRAVOS':
+
+            if self.trust_algo == 'TRAVOS':
+                self.monitor.robot_communication_range = self.limited_communication_range
                 trust_record = self.trust_engine.calculate_direct_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
+                if self.run_communication_comparison:
+                    self.monitor.robot_communication_range = self.unlimited_communication_range
+                    unlimited_trust_record = self.trust_engine.calculate_direct_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
+                    self.monitor.collect_trust_values(timestep, request_robot_id,  self.id,
+                                                      'provider_to_reporter', trust_record,
+                                                      unlimited_trust_record)
                 if trust_record['direct_confidence'] < 0.95:
+                    self.monitor.robot_communication_range = self.limited_communication_range
                     trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id,
                                                                                            task_info, timestep,
                                                                                            self.robots_capable_tasks)
-            elif self.trust_algo == 'YUSINGH':
+                    if self.run_communication_comparison:
+                        self.monitor.robot_communication_range = self.unlimited_communication_range
+                        unlimited_trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id,
+                                                                                           task_info, timestep,
+                                                                                           self.robots_capable_tasks)
+                        self.monitor.collect_trust_values(timestep, request_robot_id, self.id,
+                                                          'provider_to_reporter', trust_record,
+                                                          unlimited_trust_record)
+
+
+            else:
+                self.monitor.robot_communication_range = self.limited_communication_range
                 trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
-            elif self.trust_algo =='FUZZY':
-                trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
-            elif self.trust_algo =='SUBJECTIVE':
-                trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
-            elif self.trust_algo == 'ML':
-                trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
+                if self.run_communication_comparison:
+                    self.monitor.robot_communication_range = self.unlimited_communication_range
+                    unlimited_trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
+                    self.monitor.collect_trust_values(timestep, request_robot_id, self.id,
+                                                      'provider_to_reporter', trust_record,
+                                                      unlimited_trust_record)
+
+            # if self.trust_algo == 'FIRE':
+            #     self.monitor.robot_communication_range = self.limited_communication_range
+            #     trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info,
+            #                                                                     timestep, self.robots_capable_tasks)
+            # elif self.trust_algo == 'YUSINGH':
+            #     trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
+            # elif self.trust_algo =='FUZZY':
+            #     trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
+            # elif self.trust_algo =='SUBJECTIVE':
+            #     trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
+            # elif self.trust_algo == 'ML':
+            #     trust_record = self.trust_engine.calculate_trust_value_provider(request_robot_id, self.id, task_info, timestep, self.robots_capable_tasks)
 
             # decide what to do based on the trust value: (1) reach threshold then dead
             # (2) map function between the trust value and the strategy
@@ -539,7 +625,9 @@ class DynamicRobot(Robot):
                 self.current_pos = self.path_list[0]
                 self.path_list.pop(0)
             except IndexError:
-                print(self.id, timestep, self.algo_engine, self.path_list)
+                pass
+                # todo: see what's wrong and why work?
+                # print(self.id, timestep, self.algo_engine, self.path_list)
 
         # If someone is requesting for help at this timestep, switch to provider mode
         if self.monitor.check_request(self.id, timestep) != None:

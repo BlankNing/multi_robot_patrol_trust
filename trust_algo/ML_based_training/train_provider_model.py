@@ -34,10 +34,10 @@ print(f"Accuracy: {accuracy:.4f}")
 print("Classification Report:")
 print(report)
 
-model_filename = 'models/provider/svm_model_rbf.pkl'
-joblib.dump(svm_model, model_filename)
-
-scaler_filename = 'models/provider/scaler.pkl'
-joblib.dump(scaler, scaler_filename)
-
-print(f'Model saved to {model_filename}')
+# model_filename = 'models/provider/svm_model_rbf.pkl'
+# joblib.dump(svm_model, model_filename)
+#
+# scaler_filename = 'models/provider/scaler.pkl'
+# joblib.dump(scaler, scaler_filename)
+#
+# print(f'Model saved to {model_filename}')

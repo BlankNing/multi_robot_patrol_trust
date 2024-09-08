@@ -33,6 +33,7 @@ class DynamicEnv(BasicEnv):
         self.uncooperative_list = config_file['trust_config']['uncooperative_list']
         self.malicous_reporter_list = config_file['trust_config']['malicious_reporter_list']
         self.malicous_amplitude = config_file['trust_config']['malicious_amplitude']
+        self.malicious_target_list = config_file['trust_config']['malicious_target_list']
         # init trust/cooperativeness dynamic
         self.trust_dynamic = config_file['trust_config']['trust_dynamic']
         self.cooperativeness_dynamic = config_file['trust_config']['cooperativeness_dynamic']
@@ -183,17 +184,23 @@ class DynamicEnv(BasicEnv):
                     }
 
                     # Malicious rating individual, regularise the rating between 0 and 1
-                    if interaction_history['reporter_id'] in self.malicous_reporter_list:
-                        interaction_history['rating_to_provider_truth'] = i['rating_to_provider']
-                        interaction_history['rating_to_provider'] += self.malicous_amplitude
-                        interaction_history['rating_to_provider'] = max(-1, min(1, interaction_history['rating_to_provider']))
-                        interaction_history['is_malicous_spreader_reporter'] = 1
+                    if interaction_history['reporter_id'] in self.malicous_reporter_list and interaction_history['provider_id'] in self.malicious_target_list:
+                        try:
+                            interaction_history['rating_to_provider_truth'] = i['rating_to_provider']
+                            interaction_history['rating_to_provider'] += self.malicous_amplitude
+                            interaction_history['rating_to_provider'] = max(-1, min(1, interaction_history['rating_to_provider']))
+                            interaction_history['is_malicous_spreader_reporter'] = 1
+                        except:
+                            pass
 
-                    if interaction_history['provider_id'] in self.malicous_reporter_list:
-                        interaction_history['rating_to_reporter_truth'] = i['rating_to_reporter']
-                        interaction_history['rating_to_reporter'] += self.malicous_amplitude
-                        interaction_history['rating_to_reporter'] = max(-1, min(1, interaction_history['rating_to_reporter']))
-                        interaction_history['is_malicous_spreader_provider'] = 1
+                    if interaction_history['provider_id'] in self.malicous_reporter_list and interaction_history['reporter_id'] in self.malicious_target_list:
+                        try:
+                            interaction_history['rating_to_reporter_truth'] = i['rating_to_reporter']
+                            interaction_history['rating_to_reporter'] += self.malicous_amplitude
+                            interaction_history['rating_to_reporter'] = max(-1, min(1, interaction_history['rating_to_reporter']))
+                            interaction_history['is_malicous_spreader_provider'] = 1
+                        except:
+                            pass
 
                     # adjust the reward according to the character of different robots, see if the reporter can learn to not interact with him
                     if interaction_history['provider_id'] in self.service_robots:

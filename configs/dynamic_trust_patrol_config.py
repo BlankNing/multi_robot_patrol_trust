@@ -1,10 +1,10 @@
 from utils.load_map import *
 import itertools
 
-map_name = 'cumberland'
+map_name = 'museum'
 patrol_algo = 'SEBS'
-timesteps = 10000
-robots_num = 8
+timesteps = 20000
+robots_num = 12
 trust_algo = 'FIRE'
 
 def gen_neighbours(adjacency):
@@ -34,11 +34,11 @@ dynamic_trust_patrol_config = {
         'true_positive_trustworthy': 1,
         'false_positive_trustworthy': 0,
         'true_positive_abnormal': 1,
-        'false_positive_abnormal': 0.8,
+        'false_positive_abnormal': 0.9,
         'uncooperativeness': 0.2,
         'required_tasks_list': [i for i in range(4)],
         'robots_capable_tasks':{i : [i % 4] for i in range(robots_num)},
-        'extra_reward': 3000,
+        'extra_reward': 2000,
         'env_penalty': -1000,
         'service_select_strategy': 'trust', # random, good, bad, ignore0_num, trust
         'provider_select_strategy': 'trust', # random, determined, trust
@@ -47,8 +47,9 @@ dynamic_trust_patrol_config = {
         'guide_algo': 'Random',
         'sweep_algo': 'CGG',
         'provider_select_randomness': 'boltzmann', # determined, boltzmann
-        'service_strategy_based_on_trust': {'threshold':0.875}, #{threshold: 0.3}, {function:which function}
-        'communication_range':200,
+        'run_communication_comparison': False,
+        'service_strategy_based_on_trust': {'threshold':0.8}, #{threshold: 0.3}, {function:which function}
+        'communication_range':100,
         'guide_robot_id': [4],
         'sweep_robot_id': [7],
     },
@@ -62,13 +63,14 @@ dynamic_trust_patrol_config = {
         'patrol_algo_name': 'CGG'
     },
     'trust_config':{
-        'trust_dynamic': {2000: {0:1, 4:0}, 5000: {0:0, 4:1}}, # {timestep_1: {robot_id: trustworthy 1 /untrustworthy 0 },}
-        'cooperativeness_dynamic': {4000: {4:1}}, # {timestep_1: {robot_id: cooperative 1 /uncooperative 0 },}
+        'trust_dynamic': {2000: {0:1, 5:0}, 5000: {0:0}, 8000:{5:1}, 13000: {0:1}, 15000:{5:0}}, # {timestep_1: {robot_id: trustworthy 1 /untrustworthy 0 },}
+        'cooperativeness_dynamic': {}, # {timestep_1: {robot_id: cooperative 1 /uncooperative 0 },}
         'untrust_list': [0],
         'uncooperative_list': [],
         'trust_algo': trust_algo,
         'trust_mode': 'IT+WR',
         'malicious_reporter_list': [],
+        'malicious_target_list': [],
         'malicious_amplitude': -0.2,
     },
     'total_steps':timesteps,

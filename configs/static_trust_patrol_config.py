@@ -1,3 +1,5 @@
+# todo: copy the setting at the end of the page to config
+
 from utils.load_map import *
 
 map_name = 'museum'

@@ -11,7 +11,7 @@ notice closest robot, todo
 choose to cooperate with probability 0.7 todo
 '''
 
-experiment = 'dynamic'
+experiment = 'static'
 
 if experiment == 'static':
     from envs.Static_Trust.StaticEnv import StaticEnv as Env
@@ -32,6 +32,8 @@ print(display_config)
 
 trust_method = config['robot_config']['service_select_strategy']
 trust_algorithm = config['trust_config']['trust_algo']
+communication_range = config['robot_config']['communication_range']
+patrol_method = config['algo_config']['patrol_algo_name']
 
 # set the logging system, create necessary file folders
 result_dir_path = config['result_dir_path']
@@ -40,8 +42,8 @@ result_dir = os.path.join(result_dir_path, current_time)
 os.makedirs(result_dir, exist_ok=True)
 log_file_path = os.path.join(result_dir, 'experiment.log')
 # init logging system
-logging.basicConfig(filename = log_file_path, level=logging.INFO,
-                    format = '%(message)s')
+# logging.basicConfig(filename = log_file_path, level=logging.INFO,
+#                     format = '%(message)s')
 
 # guarantee reproduciblility
 try:
@@ -71,10 +73,20 @@ print(env.monitor.histories)
 # save interaction history as csv
 import pandas as pd
 data = pd.DataFrame(env.monitor.histories)
-data.to_csv(os.path.join(result_dir, f'{trust_algorithm}_{trust_method}_histories.csv'))
+
+title = f'{trust_algorithm}_{trust_method}_histories_{patrol_method}.csv'
+
+if trust_method in ['good', 'random', 'bad']:
+    title = f'{trust_method}_histories_{patrol_method}.csv'
+
+data.to_csv(os.path.join(result_dir, title))
+
+data = pd.DataFrame(env.monitor.communication_comparison_experiment)
+data.to_csv(os.path.join(result_dir, f'{trust_algorithm}_{trust_method}_communication_comparison_{communication_range}.csv'))
 
 # env.monitor.plot_idleness_in_range([i for i in range(6)])
 # env.monitor.combined_reward_trust_with_all_robot_plot(0, config['robot_config']['service_select_strategy'])
 # env.monitor.create_patrol_gif_new(config, 'SEBS_museum_recharge_service.gif')
 
 re = env.monitor.average_reward_per_round()
+

@@ -16,6 +16,7 @@ class DynamicMonitor(Monitor):
         self.reporter_histories = self.generate_history_dict()
         self.provider_histories = self.generate_history_dict()
         self.histories = []
+        self.communication_comparison_experiment = []
         self.informative_impressions = []
         self.recharging_robots = []
         self.robot_communication_range = -1
@@ -99,6 +100,19 @@ class DynamicMonitor(Monitor):
                                               'trust_value_towards_provider': trust_value_towards_provider,
                                               'trust_value_to_provider': trust_value_to_provider,
                                               'reporter_trustworthiness': reporter_trustworthiness}
+
+    def collect_trust_values(self, timestep, reporter_id, provider_id, mode, limited_trust_record, unlimited_trust_record):
+        record = {
+            'timestep': timestep,
+            'reporter_id': reporter_id,
+            'provider_id': provider_id,
+            'trust_direction': mode,
+            'limited_trust_record': limited_trust_record,
+            'unlimited_trust_record': unlimited_trust_record
+        }
+        self.communication_comparison_experiment.append(record)
+
+
     def get_recharging_robots(self):
         return self.recharging_robots
 
