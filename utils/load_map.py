@@ -17,4 +17,19 @@ def get_pgm_map_matrix(map_name):
     return read_pgm_image(f'./maps/{map_name}/{map_name}.pgm')
 
 def get_default_init_pos(node_pos_matrix, robots_num):
-    return [tuple(node_pos_matrix[i * 4]) for i in range(robots_num)]
+    if len(node_pos_matrix) < robots_num:
+        raise ValueError("The number of nodes in node_pos_matrix must be at least equal to robots_num.")
+
+    step = len(node_pos_matrix) / robots_num
+    indices = [int(i * step) for i in range(robots_num)]
+
+    indices = [min(i, len(node_pos_matrix) - 1) for i in indices]
+
+    return [tuple(node_pos_matrix[i]) for i in indices]
+
+def get_predefined_path(map_name):
+    try:
+        pre_path = np.load(f'./maps/{map_name}/{map_name}_corrected_paths.npy', allow_pickle=True).item()
+    except:
+        pre_path = None
+    return pre_path

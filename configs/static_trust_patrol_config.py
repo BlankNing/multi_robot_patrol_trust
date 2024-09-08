@@ -1,10 +1,12 @@
+# todo: copy the setting at the end of the page to config
+
 from utils.load_map import *
 
 map_name = 'museum'
 patrol_algo = 'partition'
-timesteps = 3000
+timesteps = 10000
 robots_num = 8
-trust_algo = 'ML'
+trust_algo = 'FIRE' # FIRE, TRAVOS, SUBJECTIVE, YUSINGH, FUZZY, ML
 
 
 static_trust_patrol_config = {
@@ -20,25 +22,25 @@ static_trust_patrol_config = {
         'true_positive_trustworthy': 1,
         'false_positive_trustworthy': 0,
         'true_positive_abnormal': 1,
-        'false_positive_abnormal': 0.7,
+        'false_positive_abnormal': 0.9,
         'uncooperativeness': 0.2,
         'required_tasks_list': [i for i in range(4)],
         'robots_capable_tasks':{i : [i % 4] for i in range(robots_num)},
-        'extra_reward': 4000,
-        'env_penalty': -4000,
+        'extra_reward': 3000,
+        'env_penalty': -1000,
         'service_select_strategy': 'trust', # random, good, bad, ignore0_num, trust
         'provider_select_strategy': 'trust', # random, determined, trust
         'trust_algo': trust_algo,
         'provider_select_randomness': 'boltzmann', # determined, boltzmann
-        'service_strategy_based_on_trust': {'threshold':0}, #{threshold: 0.3}, {function:which function}
-        'communication_range': 10000,
+        'service_strategy_based_on_trust': {'threshold': 0.90}, #{threshold: 0.3}, {function:which function}
+        'communication_range': 100000,
     },
     'algo_config':{
         'patrol_algo_name':patrol_algo,
     },
     'trust_config':{
         'untrust_list': [0],
-        'uncooperative_list': [0],
+        'uncooperative_list': [],
         'trust_algo': trust_algo,
         'trust_mode': 'IT+WR',
     },

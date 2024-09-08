@@ -73,7 +73,7 @@ class MLTrust(Trust):
         predict_label = self.reporter_model.predict(scaled_features)
         trust_value = self.trust_label_to_value(predict_label)
 
-        return {'trust_value': trust_value, 'features': features}
+        return {'trust_value': trust_value, 'features': scaled_features}
 
 
     def calculate_trust_value_provider(self, reporter_id, provider_id, task_info, timestep, robot_capable_tasks): # return (0,1)

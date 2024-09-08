@@ -68,7 +68,9 @@ class StaticEnv(BasicEnv):
         interaction_flag = False
         robot_pos_records = []
         env_interaction_impressions= []
+        robot_current_states = []
         for robot in self.robots:
+            robot_current_states.append(robot.state)
             robot_pos_record, env_interaction_impression = robot.step(verbose=verbose, timestep=self.timestep)
             robot_pos_records.append(robot_pos_record)
             env_interaction_impressions.append(env_interaction_impression)
@@ -151,6 +153,6 @@ class StaticEnv(BasicEnv):
         # node record
         node_idleness_records = []
         for node in self.nodes:
-            node_idleness_record = node.step(robot_pos_records)
+            node_idleness_record = node.step(robot_pos_records, robot_current_states)
             node_idleness_records.append(node_idleness_record)
         self.monitor.collect_node_idleness(node_idleness_records)
