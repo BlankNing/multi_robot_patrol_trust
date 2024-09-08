@@ -15,6 +15,7 @@ static_trust_patrol_config = {
         'node_pos_matrix':get_node_pos_matrix(map_name),
         'map_adj_matrix':get_map_adj_matrix(map_name),
         'pgm_map_matrix':get_pgm_map_matrix(map_name),
+        'precomputed_paths': get_predefined_path(map_name),
     },
     'robot_config':{
         'robots_num': robots_num,
